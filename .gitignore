@@ -1,0 +1,58 @@
+# ---- Python ----
+__pycache__/
+*.py[cod]
+*$py.class
+*.egg-info/
+.eggs/
+build/
+dist/
+.venv/
+venv/
+env/
+.python-version
+
+# ---- Test / coverage ----
+.pytest_cache/
+.coverage
+htmlcov/
+.ruff_cache/
+.mypy_cache/
+
+# ---- PyInstaller ----
+*.spec.bak
+*.manifest
+
+# ---- C++ / CMake ----
+cpp/build/
+cpp/out/
+*.o
+*.obj
+*.so
+*.dylib
+*.dll
+*.exe
+!docs/**/*.exe
+CMakeCache.txt
+CMakeFiles/
+cmake_install.cmake
+Makefile
+compile_commands.json
+
+# ---- OS ----
+.DS_Store
+Thumbs.db
+desktop.ini
+
+# ---- IDE ----
+.idea/
+.vscode/
+*.swp
+*~
+
+# ---- App runtime output ----
+logs/
+*.log
+captures/
+*.csv
+!tests/**/*.csv
+!docs/**/*.csv

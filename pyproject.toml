@@ -1,0 +1,70 @@
+[build-system]
+requires = ["setuptools>=68", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "fae-toolkit"
+version = "0.1.0"
+description = "Cross-platform field engineering toolkit for industrial device communication testing (BMS / IO / teaching), with built-in device simulators."
+readme = "README.md"
+requires-python = ">=3.10"
+license = { text = "MIT" }
+authors = [{ name = "Sangbong Lee (이상봉)", email = "batmantwo7233@gmail.com" }]
+keywords = ["FAE", "serial", "modbus", "bms", "agv", "automation", "test", "qt"]
+classifiers = [
+    "Programming Language :: Python :: 3",
+    "Operating System :: Microsoft :: Windows",
+    "Operating System :: POSIX :: Linux",
+    "Topic :: Scientific/Engineering",
+    "Intended Audience :: Manufacturing",
+]
+
+# Core dependencies are intentionally light so the communication/protocol
+# layer can be installed and tested headlessly (e.g. in CI) without Qt.
+dependencies = [
+    "pyserial>=3.5",
+]
+
+[project.optional-dependencies]
+gui = [
+    "PySide6>=6.6",
+    "pyqtgraph>=0.13",
+    "numpy>=1.24",
+]
+dev = [
+    "pytest>=7.4",
+    "pytest-cov>=4.1",
+    "ruff>=0.4",
+]
+build = [
+    "pyinstaller>=6.3",
+]
+
+[project.urls]
+Homepage = "https://github.com/bong7233/FAE_Toolkit_Bong"
+Portfolio = "https://bongfae-production.up.railway.app/#about"
+
+[project.scripts]
+# Headless demo / automation entry point (no display required)
+fae-toolkit = "fae_toolkit.cli:main"
+
+[project.gui-scripts]
+# Desktop GUI entry point
+fae-toolkit-gui = "fae_toolkit.ui.app:main"
+
+[tool.setuptools.packages.find]
+where = ["src"]
+
+[tool.ruff]
+line-length = 100
+target-version = "py310"
+src = ["src", "tests"]
+
+[tool.ruff.lint]
+select = ["E", "F", "I", "UP", "B", "W"]
+ignore = ["B008"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+addopts = "-ra"
+filterwarnings = ["ignore::DeprecationWarning"]
