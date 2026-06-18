@@ -105,12 +105,7 @@ jobs:
       - uses: actions/checkout@v4
 
       - name: Install build tools
-        run: apt-get install -y python3-colcon-common-extensions python3-pip
-
-      - name: Install toolkit (for runtime imports)
-        # Non-editable install: the container's pip (22.x) can't do PEP 660
-        # editable builds, and colcon/runtime only need the package importable.
-        run: pip3 install .
+        run: apt-get install -y python3-colcon-common-extensions
 
       - name: colcon build
         shell: bash
@@ -123,10 +118,13 @@ jobs:
 
       - name: Node import smoke test
         shell: bash
+        # fae_toolkit is pure-Python with lazy optional deps, so importing the
+        # nodes only needs it on PYTHONPATH (from src/) plus the colcon install.
         run: |
           . /opt/ros/humble/setup.sh
           . ws/install/setup.sh
-          python3 -c "import fae_ros2_bridge.bms_publisher, fae_ros2_bridge.io_publisher; print('import OK')"
+          PYTHONPATH="$GITHUB_WORKSPACE/src:$PYTHONPATH" \
+            python3 -c "import fae_ros2_bridge.bms_publisher, fae_ros2_bridge.io_publisher; print('import OK')"
 
   package:
     name: Package executable (${{ matrix.os }})
