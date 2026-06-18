@@ -63,3 +63,12 @@ def test_io_view_updates_against_simulator(qapp):
 
     view.shutdown()
     assert not view._connected
+
+
+def test_teaching_view_loads_and_validates(qapp):
+    window = MainWindow()
+    view = window.teaching_view
+    qapp.processEvents()
+    assert view.table.rowCount() == 6  # sample project has 6 points
+    view._validate()
+    assert "OK" in view.log_view.toPlainText()

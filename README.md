@@ -21,7 +21,12 @@
 ![IO / PIO interlock test module](docs/screenshot_io.png)
 
 > ② IO/Modbus 통신 테스트 모듈 — 디지털 입력(센서/PIO)·출력(액추에이터/시그널타워)·아날로그를
-> 진단하고, **인터락**을 시연한 화면(E-STOP 트립 → 모션 출력 거부, 빨간 시그널). **둘 다 하드웨어 없이** 실행됩니다.
+> 진단하고, **인터락**을 시연한 화면(E-STOP 트립 → 모션 출력 거부, 빨간 시그널). 하드웨어 없이 실행됩니다.
+
+![Teaching point management module](docs/screenshot_teaching.png)
+
+> ③ 티칭 포인트 관리(심화) — 노드/루트를 2D 맵으로 시각화하고, 포인트(Load/Unload/Charge 등)를
+> 편집하며, JSON/CSV로 입출력하고, 검증(중복·미연결·Load/Unload 누락 등)을 수행하는 화면.
 
 ## 왜 이 프로젝트인가
 
@@ -38,7 +43,7 @@
 |------|------|------|
 | ① 배터리(BMS) 통신 테스트 | 요청 프레임 송신 → 응답 수신·파싱 → 전압/전류/SOC/온도/알람 실시간 표시·로깅, 고장 주입 | ✅ 동작 (CLI+GUI, 시뮬레이터) |
 | ② IO / Modbus 통신 테스트 | 디지털/아날로그 IO 읽기·쓰기, PIO·인터락 조건 진단 | ✅ 동작 (CLI+GUI, 시뮬레이터) |
-| ③ 티칭 포인트 관리(심화) | 노드/루트·Load/Unload 포인트 관리·시각화·버전관리·Import/Export | 🗓️ 예정 |
+| ③ 티칭 포인트 관리(심화) | 노드/루트·Load/Unload 포인트 관리·2D 시각화·검증·Import/Export | ✅ 동작 (GUI 2D 맵, JSON/CSV) |
 | C++ 코어 (CMake) | CRC/Modbus 코어를 C++17로 구현, 양 OS 빌드/테스트 | ✅ 동작 (CMake+CTest, 양 OS CI) |
 | ROS2 브릿지 | 텔레메트리를 ROS2 토픽으로 퍼블리시 (Linux) | 🗓️ 선택 |
 
@@ -126,7 +131,7 @@ cpp/               C++17 프로토콜 코어 (CRC/Modbus) + CMake/CTest
 - [x] CI: Windows·Linux 테스트 매트릭스 + 오프스크린 GUI 스모크
 - [x] CD: 태그 시 양 OS 실행파일 자동 빌드/릴리스 (워크플로우 구성)
 - [x] ② IO/Modbus 모듈: 코덱(coils/DI/AI) + 인터락 시뮬레이터 + CLI + GUI
-- [ ] ③ 티칭 포인트 관리(심화)
+- [x] ③ 티칭 포인트 관리(심화): 모델/검증 + 2D 맵 GUI + JSON/CSV
 - [x] C++ 프로토콜 코어(CRC/Modbus) + CMake + CTest (양 OS CI)
 - [ ] C++ ↔ Python pybind11 연동
 - [ ] ROS2 브릿지 노드 (Linux)

@@ -8,6 +8,7 @@ from PySide6.QtWidgets import QLabel, QMainWindow, QTabWidget, QWidget
 from fae_toolkit import __version__
 from fae_toolkit.ui.battery_view import BatteryView
 from fae_toolkit.ui.io_view import IoView
+from fae_toolkit.ui.teaching_view import TeachingView
 
 
 def _placeholder(text: str) -> QWidget:
@@ -26,13 +27,15 @@ class MainWindow(QMainWindow):
         tabs = QTabWidget()
         self.battery_view = BatteryView()
         self.io_view = IoView()
+        self.teaching_view = TeachingView()
         tabs.addTab(self.battery_view, "① Battery (BMS)")
         tabs.addTab(self.io_view, "② IO / Modbus")
-        tabs.addTab(_placeholder("🚧 티칭 포인트 관리(심화) — coming soon"), "③ Teaching")
+        tabs.addTab(self.teaching_view, "③ Teaching")
         self.setCentralWidget(tabs)
         self.statusBar().showMessage("Ready — select 'Simulator (no hardware)' and press Connect")
 
     def closeEvent(self, event) -> None:  # noqa: N802 (Qt override)
         self.battery_view.shutdown()
         self.io_view.shutdown()
+        self.teaching_view.shutdown()
         super().closeEvent(event)

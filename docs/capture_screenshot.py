@@ -63,6 +63,16 @@ def _capture_io(app: QApplication, window: MainWindow, tabs, out: str) -> None:
     view.shutdown()
 
 
+def _capture_teaching(app: QApplication, window: MainWindow, tabs, out: str) -> None:
+    tabs.setCurrentIndex(2)
+    view = window.teaching_view
+    view.table.selectRow(4)  # highlight ST_A_LOAD on the map
+    view._validate()
+    _pump(app, 0.5)
+    ok = window.grab().save(out, "PNG")
+    print(f"teaching: saved={ok} -> {out}")
+
+
 def main() -> int:
     app = QApplication.instance() or QApplication([])
     window = MainWindow()
@@ -71,6 +81,7 @@ def main() -> int:
     tabs = window.centralWidget()
     _capture_battery(app, window, "docs/screenshot_battery.png")
     _capture_io(app, window, tabs, "docs/screenshot_io.png")
+    _capture_teaching(app, window, tabs, "docs/screenshot_teaching.png")
     return 0
 
 
