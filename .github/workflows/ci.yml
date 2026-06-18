@@ -40,6 +40,10 @@ jobs:
       - name: Ruff format check
         run: ruff format --check .
 
+      - name: Install socat (Linux real-serial test)
+        if: runner.os == 'Linux'
+        run: sudo apt-get update && sudo apt-get install -y socat
+
       - name: Run tests
         run: pytest -q
 
@@ -90,6 +94,43 @@ jobs:
 
       - name: Test (CTest)
         run: ctest --test-dir cpp/build -C Release --output-on-failure
+
+  pybind11-build:
+    name: pybind11 module (${{ matrix.os }})
+    # Builds the C++ core as a Python extension and checks it matches Python.
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, windows-latest]
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 20
+    defaults:
+      run:
+        shell: bash
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+          cache: pip
+
+      - name: Install pybind11
+        run: python -m pip install --upgrade pip pybind11
+
+      - name: Configure (CMake + pybind11)
+        run: |
+          PYBIND_DIR="$(python -m pybind11 --cmakedir | tr '\\' '/')"
+          PYEXE="$(python -c 'import sys, pathlib; print(pathlib.Path(sys.executable).as_posix())')"
+          cmake -S cpp -B cpp/build -DCMAKE_BUILD_TYPE=Release -DFAE_BUILD_PYBIND=ON \
+            -Dpybind11_DIR="$PYBIND_DIR" -DPython_EXECUTABLE="$PYEXE"
+
+      - name: Build
+        run: cmake --build cpp/build --config Release
+
+      - name: Verify Python <-> C++ parity
+        run: PYTHONPATH=cpp/build/py python cpp/python/check_bindings.py
 
   ros2-build:
     name: ROS 2 bridge build (Humble)

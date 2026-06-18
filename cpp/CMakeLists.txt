@@ -24,3 +24,19 @@ enable_testing()
 add_executable(crc_tests tests/test_crc.cpp)
 target_link_libraries(crc_tests PRIVATE faecore)
 add_test(NAME crc_tests COMMAND crc_tests)
+
+# Optional: build the pybind11 Python module (`faecore`). Enabled in CI with
+#   cmake -S cpp -B build -DFAE_BUILD_PYBIND=ON -Dpybind11_DIR=$(python -m pybind11 --cmakedir)
+option(FAE_BUILD_PYBIND "Build the pybind11 Python module" OFF)
+if(FAE_BUILD_PYBIND)
+  find_package(pybind11 CONFIG REQUIRED)
+  pybind11_add_module(faecore_py python/bindings.cpp src/crc.cpp src/modbus.cpp)
+  target_include_directories(faecore_py PRIVATE include)
+  set_target_properties(faecore_py PROPERTIES OUTPUT_NAME faecore)
+  # Emit the module into build/py/ on every generator/config for easy import.
+  foreach(cfg "" _DEBUG _RELEASE _RELWITHDEBINFO _MINSIZEREL)
+    set_target_properties(faecore_py PROPERTIES
+      LIBRARY_OUTPUT_DIRECTORY${cfg} ${CMAKE_BINARY_DIR}/py
+      RUNTIME_OUTPUT_DIRECTORY${cfg} ${CMAKE_BINARY_DIR}/py)
+  endforeach()
+endif()

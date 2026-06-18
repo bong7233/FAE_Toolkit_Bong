@@ -213,6 +213,92 @@ def run_teaching_demo(args: argparse.Namespace) -> int:
     return 0
 
 
+def run_can_demo(args: argparse.Namespace) -> int:
+    import can  # optional dependency, imported lazily
+
+    from fae_toolkit.protocols.canbus import CanBmsClient
+    from fae_toolkit.sim.can_bms import CanBmsSimulator
+
+    sim = None
+    if args.interface == "virtual":
+        dev_bus = can.Bus(interface="virtual", channel=args.channel, receive_own_messages=False)
+        app_bus = can.Bus(interface="virtual", channel=args.channel, receive_own_messages=False)
+        sim = CanBmsSimulator(dev_bus)
+        sim.start()
+        print(f"CAN BMS demo on virtual bus '{args.channel}' — no hardware required")
+    else:
+        dev_bus = None
+        app_bus = can.Bus(interface=args.interface, channel=args.channel)
+        print(f"CAN BMS demo on {args.interface}:{args.channel}")
+
+    client = CanBmsClient(app_bus, timeout=args.timeout)
+    print("-" * 72)
+    start = time.monotonic()
+    next_poll = start
+    triggered = False
+    rc = 0
+    try:
+        while True:
+            elapsed = time.monotonic() - start
+            if elapsed >= args.duration:
+                break
+            if sim is not None and not triggered and elapsed >= args.duration * 0.5:
+                triggered = True
+                print(">> scenario: heavy discharge + forced over-temperature")
+                sim.set_load_current(-160.0)
+                sim.force_warning(BatteryFlag.OVER_TEMP)
+            try:
+                st = client.read_state()
+                status = "OK" if not st.has_alarm else "ALARM: " + ", ".join(st.active_flags())
+                print(
+                    f"t={elapsed:5.1f}s  V={st.voltage:6.2f}  I={st.current:+7.2f}A  "
+                    f"SOC={st.soc:5.1f}%  T={st.max_temp:4.1f}C  [{status}]"
+                )
+            except TransportTimeout:
+                print(f"t={elapsed:5.1f}s  [CAN] no telemetry (timeout)")
+            next_poll += args.interval
+            time.sleep(max(0.0, next_poll - time.monotonic()))
+    except KeyboardInterrupt:
+        rc = 130
+    finally:
+        if sim is not None:
+            sim.stop()
+        app_bus.shutdown()
+        if dev_bus is not None:
+            dev_bus.shutdown()
+    print("-" * 72)
+    print("done")
+    return rc
+
+
+def run_bms_sim_serve(args: argparse.Namespace) -> int:
+    """Bind the BMS simulator to a real serial port so it acts as a device.
+
+    Point this at one end of a virtual serial pair (socat/com0com) or a real
+    RS-232/485 adapter, then connect any Modbus master (including
+    ``fae-toolkit bms-demo --port <other-end>``).
+    """
+    transport = SerialTransport(args.port, baudrate=args.baudrate)
+    transport.open()
+    sim = BmsSimulator(transport, unit_id=args.unit)
+    sim.start()
+    print(f"BMS simulator serving on {args.port} @ {args.baudrate} baud (unit {args.unit})")
+    print("Ctrl+C to stop" if args.duration <= 0 else f"running for {args.duration}s")
+    rc = 0
+    try:
+        if args.duration > 0:
+            time.sleep(args.duration)
+        else:
+            while True:
+                time.sleep(0.5)
+    except KeyboardInterrupt:
+        rc = 130
+    finally:
+        sim.stop()
+        transport.close()
+    return rc
+
+
 def _add_link_args(parser: argparse.ArgumentParser) -> None:
     parser.add_argument("--port", help="serial port (e.g. COM3 or /dev/ttyUSB0); omit to simulate")
     parser.add_argument("--baudrate", type=int, default=9600)
@@ -241,6 +327,21 @@ def build_parser() -> argparse.ArgumentParser:
     teaching = sub.add_parser("teaching-demo", help="build and validate a sample teaching project")
     teaching.add_argument("--out", help="write the project to this .json (and a .csv next to it)")
     teaching.set_defaults(func=run_teaching_demo)
+
+    serve = sub.add_parser("bms-sim-serve", help="run the BMS simulator on a real serial port")
+    serve.add_argument("--port", required=True, help="serial port (e.g. /dev/pts/3, COM4)")
+    serve.add_argument("--baudrate", type=int, default=9600)
+    serve.add_argument("--unit", type=int, default=1, help="Modbus unit id")
+    serve.add_argument("--duration", type=float, default=0.0, help="run seconds (0 = until Ctrl+C)")
+    serve.set_defaults(func=run_bms_sim_serve)
+
+    can_demo = sub.add_parser("can-demo", help="read a CAN BMS (virtual bus or real interface)")
+    can_demo.add_argument("--interface", default="virtual", help="python-can interface")
+    can_demo.add_argument("--channel", default="fae_demo", help="CAN channel name")
+    can_demo.add_argument("--interval", type=float, default=0.5, help="poll interval seconds")
+    can_demo.add_argument("--duration", type=float, default=10.0, help="run time seconds")
+    can_demo.add_argument("--timeout", type=float, default=1.0, help="per-read timeout seconds")
+    can_demo.set_defaults(func=run_can_demo)
     return parser
 
 

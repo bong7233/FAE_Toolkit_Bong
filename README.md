@@ -13,6 +13,10 @@
 
 ## 미리보기
 
+![FAE Toolkit battery module live demo](docs/demo_battery.gif)
+
+> 라이브 데모 — 내장 시뮬레이터 연결 → 실시간 전압/전류 트렌드 → 고장 주입으로 알람까지(하드웨어 없이).
+
 ![Battery (BMS) communication test module](docs/screenshot_battery.png)
 
 > ① 배터리(BMS) 통신 테스트 모듈 — 내장 시뮬레이터에 연결해 실시간 전압/전류 트렌드를 보고,
@@ -44,6 +48,7 @@
 | ① 배터리(BMS) 통신 테스트 | 요청 프레임 송신 → 응답 수신·파싱 → 전압/전류/SOC/온도/알람 실시간 표시·로깅, 고장 주입 | ✅ 동작 (CLI+GUI, 시뮬레이터) |
 | ② IO / Modbus 통신 테스트 | 디지털/아날로그 IO 읽기·쓰기, PIO·인터락 조건 진단 | ✅ 동작 (CLI+GUI, 시뮬레이터) |
 | ③ 티칭 포인트 관리(심화) | 노드/루트·Load/Unload 포인트 관리·2D 시각화·검증·Import/Export | ✅ 동작 (GUI 2D 맵, JSON/CSV) |
+| CAN BMS (broadcast) | python-can 가상 버스로 주기 텔레메트리 디코딩 | ✅ 동작 (CLI, 시뮬레이터) |
 | C++ 코어 (CMake) | CRC/Modbus 코어를 C++17로 구현, 양 OS 빌드/테스트 | ✅ 동작 (CMake+CTest, 양 OS CI) |
 | ROS2 브릿지 | 텔레메트리를 ROS2 토픽으로 퍼블리시 (Linux) | ✅ 동작 (ament_python, colcon CI) |
 
@@ -85,31 +90,38 @@ pip install -e ".[gui,dev]"
 
 ### 하드웨어 없이 데모 실행 (시뮬레이터)
 ```bash
-# 헤드리스: 가상 BMS와 통신하며 텔레메트리를 콘솔로 출력
-fae-toolkit bms-demo
+# 헤드리스 데모 (콘솔, 하드웨어 불필요)
+fae-toolkit bms-demo        # 배터리(Modbus) 텔레메트리 + 고장 주입
+fae-toolkit io-demo         # IO/PIO 인터락 시나리오
+fae-toolkit can-demo        # CAN BMS 브로드캐스트 (python-can 가상 버스)
+fae-toolkit teaching-demo   # 티칭 프로젝트 생성·검증
 
 # 데스크톱 GUI
 fae-toolkit-gui
 ```
 
 ### 실제 포트로 사용 (현업)
-실제 장비, 또는 가상 시리얼 포트 페어를 만들어 "진짜 포트" 경로로 테스트할 수 있습니다.
+실제 장비에 바로 연결하거나, 가상 시리얼 페어로 "진짜 포트" 경로를 시연할 수 있습니다.
 ```bash
-# Linux: 가상 시리얼 페어 생성
-socat -d -d pty,raw,echo=0 pty,raw,echo=0
-#  → /dev/pts/X 와 /dev/pts/Y 두 포트가 생성됨
-# Windows: com0com 으로 COM3<->COM4 페어 생성
+# 실제 장비
+fae-toolkit bms-demo --port /dev/ttyUSB0 --baudrate 9600   # (Windows: --port COM3)
+
+# 하드웨어 없이 실제 포트 경로 시연 (Linux, socat)
+socat -d -d PTY,link=/tmp/ttyA,raw,echo=0 PTY,link=/tmp/ttyB,raw,echo=0
+fae-toolkit bms-sim-serve --port /tmp/ttyA --baudrate 115200   # 시뮬레이터를 디바이스로 서빙
+fae-toolkit bms-demo      --port /tmp/ttyB --baudrate 115200   # 앱으로 연결
 ```
-한쪽 포트에 시뮬레이터를, 다른 쪽에 앱을 연결하면 실제 RS232/RS485 통신과 동일한 코드 경로로 동작합니다.
+시뮬레이터를 한쪽 포트에 띄우고 앱을 다른 쪽에 연결하면 실제 RS232/RS485와 **동일한 pyserial 경로**로
+동작합니다(이 흐름은 CI의 `test_serial_socat`이 자동 검증). 자세한 내용은 **[docs/HARDWARE.md](docs/HARDWARE.md)** 참고.
 
 ## 기술 스택
 
-- **언어/런타임**: Python 3.10+ (주력), C++17/CMake (CRC·Modbus 코어, 신뢰도 축)
+- **언어/런타임**: Python 3.10+ (주력), C++17/CMake + pybind11 (CRC·Modbus 코어 + Python 연동)
 - **GUI**: PySide6 (Qt 6) + pyqtgraph (실시간 플롯)
-- **통신**: pyserial (RS232/RS485), Modbus RTU (자체 구현), CAN (예정)
+- **통신**: pyserial (RS232/RS485), Modbus RTU (자체 구현), CAN (python-can)
 - **ROS 2**: rclpy 브릿지 노드 (Humble, ament_python) — 리눅스
 - **품질**: pytest, ruff(lint/format)
-- **CI/CD**: GitHub Actions (Windows + Linux 매트릭스 · C++ · ROS 2), PyInstaller 패키징
+- **CI/CD**: GitHub Actions (Windows + Linux 매트릭스 · C++ · pybind11 · ROS 2), PyInstaller 패키징
 
 ## 프로젝트 구조
 
@@ -134,8 +146,9 @@ ros2_bridge/       ROS2(ament_python) 브릿지 — BMS/IO → ROS2 토픽
 - [x] CD: 태그 시 양 OS 실행파일 자동 빌드/릴리스 (워크플로우 구성)
 - [x] ② IO/Modbus 모듈: 코덱(coils/DI/AI) + 인터락 시뮬레이터 + CLI + GUI
 - [x] ③ 티칭 포인트 관리(심화): 모델/검증 + 2D 맵 GUI + JSON/CSV
+- [x] CAN BMS 모듈 (python-can 가상 버스, CLI + 테스트)
 - [x] C++ 프로토콜 코어(CRC/Modbus) + CMake + CTest (양 OS CI)
-- [ ] C++ ↔ Python pybind11 연동
+- [x] C++ ↔ Python pybind11 연동 (양 OS CI, Python과 바이트 동일성 검증)
 - [x] ROS2 브릿지 노드 (ament_python, colcon CI)
 
 ## 저자
