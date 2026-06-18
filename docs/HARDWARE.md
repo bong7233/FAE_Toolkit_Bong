@@ -1,5 +1,7 @@
 # 실제 하드웨어 연동 가이드 (Hardware guide)
 
+> 🌐 **한국어** (기본) · [English](HARDWARE.en.md) · [⬅ README](../README.md)
+
 이 툴킷은 **실제 시리얼 포트(pyserial)** 와 **실제 CAN 인터페이스(python-can)** 에 그대로 연결됩니다.
 시뮬레이터 + loopback은 하드웨어 없이 개발/평가하기 위한 것이고, 아래 방법으로 실제 포트 경로를
 검증할 수 있습니다. (`bms-sim-serve` ↔ `bms-demo` 조합은 CI의 `test_serial_socat`이 검증하는 흐름과 동일합니다.)
