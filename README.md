@@ -13,6 +13,10 @@
 
 ## 미리보기
 
+![FAE Toolkit battery module live demo](docs/demo_battery.gif)
+
+> 라이브 데모 — 내장 시뮬레이터 연결 → 실시간 전압/전류 트렌드 → 고장 주입으로 알람까지(하드웨어 없이).
+
 ![Battery (BMS) communication test module](docs/screenshot_battery.png)
 
 > ① 배터리(BMS) 통신 테스트 모듈 — 내장 시뮬레이터에 연결해 실시간 전압/전류 트렌드를 보고,
