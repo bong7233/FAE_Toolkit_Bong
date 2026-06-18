@@ -62,11 +62,22 @@ _STRINGS: dict[str, dict[str, str]] = {
     "monitor.show_ascii": {"en": "ASCII", "ko": "ASCII"},
     "monitor.timestamp": {"en": "Timestamps", "ko": "타임스탬프"},
     "monitor.autoscroll": {"en": "Auto-scroll", "ko": "자동 스크롤"},
+    "monitor.decode_modbus": {"en": "Decode Modbus", "ko": "Modbus 해석"},
     # tabs
     "tab.serial": {"en": "Serial (RS-232/485)", "ko": "Serial (RS-232/485)"},
     "tab.tcp": {"en": "TCP/IP", "ko": "TCP/IP"},
     "tab.udp": {"en": "UDP", "ko": "UDP"},
     "tab.can": {"en": "CAN", "ko": "CAN"},
+    # saved frames (macros)
+    "group.macros": {"en": "Saved frames", "ko": "저장된 프레임"},
+    "macro.save_current": {"en": "Save current…", "ko": "현재 저장…"},
+    "macro.delete": {"en": "Delete", "ko": "삭제"},
+    "macro.apply": {"en": "Load", "ko": "불러오기"},
+    "macro.all_groups": {"en": "(all makers)", "ko": "(전체 제조사)"},
+    "macro.no_group": {"en": "(ungrouped)", "ko": "(그룹 없음)"},
+    "macro.name_title": {"en": "Save frame", "ko": "프레임 저장"},
+    "macro.name_prompt": {"en": "Name:", "ko": "이름:"},
+    "macro.group_prompt": {"en": "Group / maker (optional):", "ko": "그룹 / 제조사 (선택):"},
     # presets
     "preset.label": {"en": "Preset", "ko": "프리셋"},
     "preset.none": {"en": "(none)", "ko": "(없음)"},

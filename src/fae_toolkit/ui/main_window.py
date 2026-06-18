@@ -17,9 +17,9 @@ class MainWindow(QMainWindow):
         super().__init__()
         self.resize(1100, 680)
 
-        self.serial_tab = ByteStreamTab(SerialPanel())
-        self.tcp_tab = ByteStreamTab(TcpPanel())
-        self.udp_tab = ByteStreamTab(UdpPanel())
+        self.serial_tab = ByteStreamTab(SerialPanel(), macro_key="serial")
+        self.tcp_tab = ByteStreamTab(TcpPanel(), macro_key="tcp")
+        self.udp_tab = ByteStreamTab(UdpPanel(), macro_key="udp")
         self.can_tab = CanTab()
         self._tabs = QTabWidget()
         self._tabs.addTab(self.serial_tab, "")

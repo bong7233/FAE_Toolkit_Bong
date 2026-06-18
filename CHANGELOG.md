@@ -14,6 +14,11 @@ Windows/Linux executables to the GitHub Release automatically.
   device/host is unavailable), user-defined TX frames (HEX/ASCII, optional
   Modbus CRC-16 / CR+LF / periodic send), and a timestamped TX/RX monitor
   (HEX + ASCII). KO/EN language toggle.
+- **Modbus frame decoder** — optional "Decode Modbus" view in the monitor
+  annotates each frame (TX as request, RX as response) with the function,
+  registers/bits/exception, and CRC status.
+- **Saved frames (macros)** — store frequently used frames per maker and recall
+  them with one click; persisted to JSON and kept separately per transport tab.
 - **TeachingManager** (separate app) — AGV teaching-point manager: editable
   point table, live 2D map, validation, JSON/CSV import/export.
 - **Transports** — `SerialTransport` (pyserial), `TcpClient/TcpServer/Udp`

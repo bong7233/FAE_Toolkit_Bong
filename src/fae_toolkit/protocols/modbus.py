@@ -296,3 +296,85 @@ def process_request(
         raise IllegalFunction()
     except ModbusException as exc:
         return append_crc(bytes([unit_id, func | _EXCEPTION_MASK, exc.code]))
+
+
+# --------------------------------------------------------------------------- #
+# Frame decoding (used by the RX/TX monitor to annotate Modbus traffic)
+# --------------------------------------------------------------------------- #
+_FUNCTION_NAMES = {
+    READ_COILS: "Read Coils",
+    READ_DISCRETE_INPUTS: "Read Discrete Inputs",
+    READ_HOLDING_REGISTERS: "Read Holding Registers",
+    READ_INPUT_REGISTERS: "Read Input Registers",
+    WRITE_SINGLE_COIL: "Write Single Coil",
+    WRITE_SINGLE_REGISTER: "Write Single Register",
+}
+
+_EXCEPTION_NAMES = {
+    0x01: "Illegal Function",
+    0x02: "Illegal Data Address",
+    0x03: "Illegal Data Value",
+    0x04: "Slave Device Failure",
+    0x05: "Acknowledge",
+    0x06: "Slave Device Busy",
+    0x08: "Memory Parity Error",
+    0x0A: "Gateway Path Unavailable",
+    0x0B: "Gateway Target Failed To Respond",
+}
+
+
+def describe_frame(data: bytes, response: bool = True) -> str:
+    """Return a one-line human decode of a Modbus-RTU *frame*.
+
+    Used by the monitor to annotate raw bytes. ``response`` selects the request
+    vs. response interpretation for the read function codes (both directions
+    share a function byte but carry different payloads). Returns ``""`` when the
+    bytes are too short to be a Modbus frame.
+    """
+    if len(data) < 4:
+        return ""
+    crc_tag = "CRC OK" if check_crc(data) else "CRC BAD"
+    unit = data[0]
+    func = data[1]
+
+    if func & _EXCEPTION_MASK:
+        base = func & ~_EXCEPTION_MASK
+        name = _FUNCTION_NAMES.get(base, f"0x{base:02X}")
+        code = data[2] if len(data) >= 3 else 0
+        exc = _EXCEPTION_NAMES.get(code, f"0x{code:02X}")
+        return f"unit {unit}  EXCEPTION {name} -> {exc}  [{crc_tag}]"
+
+    name = _FUNCTION_NAMES.get(func)
+    if name is None:
+        return f"unit {unit}  func 0x{func:02X}  [{crc_tag}]"
+
+    kind = "RSP" if response else "REQ"
+    try:
+        detail = _describe_payload(func, data, response)
+    except (struct.error, IndexError):
+        detail = "(truncated)"
+    sep = "  " if detail else ""
+    return f"unit {unit}  {kind} {name}{sep}{detail}  [{crc_tag}]"
+
+
+def _describe_payload(func: int, data: bytes, response: bool) -> str:
+    """Decode the body of a (non-exception) Modbus frame into text."""
+    if func in (WRITE_SINGLE_COIL, WRITE_SINGLE_REGISTER):
+        # Requests and responses echo the same 4-byte body.
+        _, _, addr, value = struct.unpack(">BBHH", data[:6])
+        if func == WRITE_SINGLE_COIL:
+            return f"addr={addr} -> {'ON' if value == _COIL_ON else 'OFF'}"
+        return f"addr={addr} value={value} (0x{value:04X})"
+
+    if not response:
+        _, _, start, count = struct.unpack(">BBHH", data[:6])
+        return f"start={start} count={count}"
+
+    # Read responses: byte count then payload.
+    byte_count = data[2]
+    body = data[3 : 3 + byte_count]
+    if func in (READ_HOLDING_REGISTERS, READ_INPUT_REGISTERS):
+        regs = [struct.unpack_from(">H", body, i)[0] for i in range(0, len(body), 2)]
+        return f"{len(regs)} regs {regs}"
+    bits = unpack_bits(body, byte_count * 8)
+    return f"{len(bits)} bits {[int(b) for b in bits]}"

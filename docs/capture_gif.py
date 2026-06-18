@@ -79,13 +79,22 @@ def main() -> int:
     tcp._panel.host.setText("127.0.0.1")
     tcp._panel.port.setValue(port)
     tcp._connect()
+    tcp.monitor.cb_modbus.setChecked(True)  # annotate frames with the Modbus decoder
     _pump(app, 0.4)
 
-    payloads = ["01 03 00 00 00 0A", "DE AD BE EF", "48 65 6C 6C 6F", "12 34 56", "FF 00 FF 00"]
+    payloads = [
+        ("01 03 00 00 00 0A", True),
+        ("DE AD BE EF", False),
+        ("48 65 6C 6C 6F", False),
+        ("01 06 00 00 00 01", True),
+        ("FF 00 FF 00", False),
+    ]
     frames: list[Image.Image] = []
     for i in range(20):
         if i % 2 == 0:
-            tcp.sender.input.setText(payloads[(i // 2) % len(payloads)])
+            text, crc = payloads[(i // 2) % len(payloads)]
+            tcp.sender.input.setText(text)
+            tcp.sender.cb_crc.setChecked(crc)
             tcp.sender._emit()
         _pump(app, 0.25)
         frames.append(_grab(window))

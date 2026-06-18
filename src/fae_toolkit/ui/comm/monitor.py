@@ -16,6 +16,7 @@ from PySide6.QtWidgets import (
 )
 
 from fae_toolkit.core.hexfmt import to_ascii, to_hex
+from fae_toolkit.protocols.modbus import describe_frame
 from fae_toolkit.ui.i18n import i18n, tr
 
 
@@ -39,11 +40,13 @@ class MonitorWidget(QGroupBox):
         self.cb_ts.setChecked(True)
         self.cb_autoscroll = QCheckBox()
         self.cb_autoscroll.setChecked(True)
+        self.cb_modbus = QCheckBox()
+        self.cb_modbus.setChecked(False)
         self.btn_clear = QPushButton()
         self.btn_clear.clicked.connect(self._clear)
         self.btn_save = QPushButton()
         self.btn_save.clicked.connect(self._save)
-        for w in (self.cb_hex, self.cb_ascii, self.cb_ts, self.cb_autoscroll):
+        for w in (self.cb_hex, self.cb_ascii, self.cb_ts, self.cb_autoscroll, self.cb_modbus):
             options.addWidget(w)
         options.addStretch(1)
         options.addWidget(self.btn_clear)
@@ -68,6 +71,10 @@ class MonitorWidget(QGroupBox):
         if self.cb_ascii.isChecked():
             parts.append(f"| {to_ascii(data)}")
         self.view.appendPlainText("  ".join(parts))
+        if self.cb_modbus.isChecked():
+            decoded = describe_frame(data, response=(direction.strip() == "RX"))
+            if decoded:
+                self.view.appendPlainText(f"      └─ {decoded}")
         if self.cb_autoscroll.isChecked():
             self.view.ensureCursorVisible()
 
@@ -97,5 +104,6 @@ class MonitorWidget(QGroupBox):
         self.cb_ascii.setText(tr("monitor.show_ascii"))
         self.cb_ts.setText(tr("monitor.timestamp"))
         self.cb_autoscroll.setText(tr("monitor.autoscroll"))
+        self.cb_modbus.setText(tr("monitor.decode_modbus"))
         self.btn_clear.setText(tr("btn.clear"))
         self.btn_save.setText(tr("btn.save"))

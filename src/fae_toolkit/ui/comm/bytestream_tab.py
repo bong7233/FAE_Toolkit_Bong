@@ -6,10 +6,14 @@ connection and a background read thread, and wires TX/RX to the monitor.
 
 from __future__ import annotations
 
+from pathlib import Path
+
 from PySide6.QtCore import QThread, Slot
 from PySide6.QtWidgets import QHBoxLayout, QLabel, QPushButton, QVBoxLayout, QWidget
 
+from fae_toolkit.core.macros import default_store_path
 from fae_toolkit.core.transport import Transport
+from fae_toolkit.ui.comm.macros_panel import MacroPanel
 from fae_toolkit.ui.comm.monitor import MonitorWidget
 from fae_toolkit.ui.comm.panels import ConnectionPanel
 from fae_toolkit.ui.comm.reader import RxReader
@@ -18,9 +22,10 @@ from fae_toolkit.ui.i18n import i18n, tr
 
 
 class ByteStreamTab(QWidget):
-    def __init__(self, panel: ConnectionPanel) -> None:
+    def __init__(self, panel: ConnectionPanel, macro_key: str = "") -> None:
         super().__init__()
         self._panel = panel
+        self._macro_key = macro_key
         self._transport: Transport | None = None
         self._thread: QThread | None = None
         self._reader: RxReader | None = None
@@ -46,11 +51,19 @@ class ByteStreamTab(QWidget):
         self.sender.send_requested.connect(self._send)
         self.sender.error.connect(lambda m: self.monitor.log(f"send error: {m}"))
         left.addWidget(self.sender)
-        left.addStretch(1)
+        self.macros = MacroPanel(self.sender, store_path=self._macro_store_path())
+        left.addWidget(self.macros, stretch=1)
         root.addLayout(left, stretch=0)
 
         self.monitor = MonitorWidget()
         root.addWidget(self.monitor, stretch=1)
+
+    def _macro_store_path(self) -> Path:
+        """Per-transport saved-frames file (Serial frames differ from TCP, etc.)."""
+        base = default_store_path()
+        if not self._macro_key:
+            return base
+        return base.with_name(f"macros_{self._macro_key}.json")
 
     # --- connection ------------------------------------------------------- #
     def _toggle(self) -> None:

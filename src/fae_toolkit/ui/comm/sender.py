@@ -16,6 +16,7 @@ from PySide6.QtWidgets import (
 
 from fae_toolkit.core.crc import append_crc
 from fae_toolkit.core.hexfmt import parse_hex
+from fae_toolkit.core.macros import Macro
 from fae_toolkit.ui.i18n import i18n, tr
 
 # (key, hex payload to insert, enable-crc) presets reuse the protocol knowledge.
@@ -88,6 +89,24 @@ class FrameSenderWidget(QGroupBox):
         if self.cb_crlf.isChecked():
             payload = payload + b"\r\n"
         return payload
+
+    def snapshot(self, name: str = "", group: str = "") -> Macro:
+        """Capture the current entry + options as a :class:`Macro`."""
+        return Macro(
+            name=name,
+            text=self.input.text(),
+            is_hex=self.format_combo.currentText() == "HEX",
+            append_crc=self.cb_crc.isChecked(),
+            append_newline=self.cb_crlf.isChecked(),
+            group=group,
+        )
+
+    def apply_macro(self, macro: Macro) -> None:
+        """Load a saved macro back into the entry + option widgets."""
+        self.format_combo.setCurrentText("HEX" if macro.is_hex else "ASCII")
+        self.input.setText(macro.text)
+        self.cb_crc.setChecked(macro.append_crc)
+        self.cb_crlf.setChecked(macro.append_newline)
 
     def _emit(self) -> None:
         try:

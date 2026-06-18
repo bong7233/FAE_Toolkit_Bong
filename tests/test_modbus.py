@@ -120,3 +120,65 @@ def test_process_write_single_coil():
     )
     assert writes == {5: True}
     assert response == request
+
+
+# --------------------------------------------------------------------------- #
+# describe_frame (RX/TX monitor decoder)
+# --------------------------------------------------------------------------- #
+def test_describe_read_request():
+    frame = modbus.build_read_holding_registers(unit=1, start=2, count=3)
+    text = modbus.describe_frame(frame, response=False)
+    assert "REQ" in text
+    assert "Read Holding Registers" in text
+    assert "start=2" in text and "count=3" in text
+    assert "CRC OK" in text
+
+
+def test_describe_read_response():
+    response = modbus.process_request(
+        modbus.build_read_holding_registers(unit=1, start=0, count=3),
+        unit_id=1,
+        read_holding=lambda s, c: [10, 20, 30],
+    )
+    text = modbus.describe_frame(response, response=True)
+    assert "RSP" in text
+    assert "[10, 20, 30]" in text
+    assert "CRC OK" in text
+
+
+def test_describe_coil_bits_response():
+    bits = [True, False, True, True]
+    response = modbus.process_request(
+        modbus.append_crc(struct.pack(">BBHH", 1, modbus.READ_COILS, 0, len(bits))),
+        unit_id=1,
+        read_coils=lambda s, c: bits,
+    )
+    text = modbus.describe_frame(response, response=True)
+    assert "Read Coils" in text
+    assert "1, 0, 1, 1" in text
+
+
+def test_describe_write_single_coil():
+    frame = modbus.append_crc(struct.pack(">BBHH", 1, modbus.WRITE_SINGLE_COIL, 5, 0xFF00))
+    text = modbus.describe_frame(frame, response=False)
+    assert "Write Single Coil" in text
+    assert "addr=5" in text and "ON" in text
+
+
+def test_describe_exception_response():
+    response = modbus.append_crc(
+        bytes([1, modbus.READ_HOLDING_REGISTERS | 0x80, modbus.IllegalDataAddress.code])
+    )
+    text = modbus.describe_frame(response, response=True)
+    assert "EXCEPTION" in text
+    assert "Illegal Data Address" in text
+
+
+def test_describe_bad_crc_flagged():
+    frame = bytearray(modbus.build_read_holding_registers(unit=1, start=0, count=1))
+    frame[-1] ^= 0xFF
+    assert "CRC BAD" in modbus.describe_frame(bytes(frame), response=False)
+
+
+def test_describe_too_short_returns_empty():
+    assert modbus.describe_frame(b"\x01\x03", response=False) == ""

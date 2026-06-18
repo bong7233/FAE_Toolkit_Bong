@@ -89,10 +89,15 @@ def main() -> int:
     tcp._panel.host.setText("127.0.0.1")
     tcp._panel.port.setValue(port)
     tcp._connect()
+    tcp.monitor.cb_modbus.setChecked(True)  # show the Modbus frame decoder
     _pump(app, 0.5)
-    for payload in ("01 03 00 00 00 0A", "DE AD BE EF", "48 65 6C 6C 6F"):
+    for payload, crc in (
+        ("01 03 00 00 00 0A", True),
+        ("DE AD BE EF", False),
+        ("48 65 6C 6C 6F", False),
+    ):
         tcp.sender.input.setText(payload)
-        tcp.sender.cb_crc.setChecked(False)
+        tcp.sender.cb_crc.setChecked(crc)
         tcp.sender._emit()
         _pump(app, 0.4)
     _save(window, "docs/screenshot_comm_tcp.png")
