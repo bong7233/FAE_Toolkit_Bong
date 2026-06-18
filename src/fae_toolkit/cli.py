@@ -19,6 +19,7 @@ from fae_toolkit.protocols.io import IoClient, io_map
 from fae_toolkit.protocols.modbus import ModbusError, ModbusException
 from fae_toolkit.sim.bms import BmsSimulator
 from fae_toolkit.sim.io import IoSimulator
+from fae_toolkit.teaching import export_points_csv, sample_project, save_project, validate
 
 
 def _format_row(elapsed: float, tel) -> str:
@@ -183,6 +184,35 @@ def run_io_demo(args: argparse.Namespace) -> int:
     return rc
 
 
+def run_teaching_demo(args: argparse.Namespace) -> int:
+    project = sample_project()
+    print(f"Teaching project '{project.name}' (v{project.version})")
+    print(f"  points: {len(project.points)}")
+    for p in project.points:
+        print(
+            f"    [{p.id}] {p.name:13s} {p.type.value:8s} "
+            f"({p.x:6.0f},{p.y:6.0f}) θ={p.theta:4.0f}  {p.station}"
+        )
+    print(f"  routes: {len(project.routes)}")
+    for route in project.routes:
+        names = " -> ".join(
+            project.get_point(i).name for i in route.point_ids if project.get_point(i)
+        )
+        print(f"    {route.name}: {names}")
+
+    issues = validate(project)
+    print(f"  validation: {len(issues)} issue(s)")
+    for issue in issues:
+        print(f"    - {issue}")
+
+    if args.out:
+        save_project(project, args.out)
+        csv_path = args.out.rsplit(".", 1)[0] + ".csv"
+        export_points_csv(project, csv_path)
+        print(f"saved {args.out} and {csv_path}")
+    return 0
+
+
 def _add_link_args(parser: argparse.ArgumentParser) -> None:
     parser.add_argument("--port", help="serial port (e.g. COM3 or /dev/ttyUSB0); omit to simulate")
     parser.add_argument("--baudrate", type=int, default=9600)
@@ -207,6 +237,10 @@ def build_parser() -> argparse.ArgumentParser:
     io = sub.add_parser("io-demo", help="exercise a remote-IO/PIO block (simulator or real port)")
     _add_link_args(io)
     io.set_defaults(func=run_io_demo)
+
+    teaching = sub.add_parser("teaching-demo", help="build and validate a sample teaching project")
+    teaching.add_argument("--out", help="write the project to this .json (and a .csv next to it)")
+    teaching.set_defaults(func=run_teaching_demo)
     return parser
 
 
