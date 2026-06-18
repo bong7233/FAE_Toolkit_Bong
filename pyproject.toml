@@ -54,8 +54,9 @@ Portfolio = "https://bongfae-production.up.railway.app/#about"
 fae-toolkit = "fae_toolkit.cli:main"
 
 [project.gui-scripts]
-# Desktop GUI entry point
+# Desktop GUI entry points
 fae-toolkit-gui = "fae_toolkit.ui.app:main"
+teaching-manager = "fae_toolkit.teaching_manager.app:main"
 
 [tool.setuptools.packages.find]
 where = ["src"]

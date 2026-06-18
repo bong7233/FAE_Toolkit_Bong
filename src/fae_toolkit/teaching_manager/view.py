@@ -1,9 +1,4 @@
-"""Teaching-point management panel.
-
-An editable point table on the left and a live 2D map (nodes coloured by type,
-routes drawn as polylines) on the right. Open/Save projects as JSON, export
-points to CSV, and run validation — the teaching workflow as a desktop tool.
-"""
+"""Teaching-point editor widget (table + 2D map), i18n-aware."""
 
 from __future__ import annotations
 
@@ -33,6 +28,7 @@ from fae_toolkit.teaching import (
     save_project,
     validate,
 )
+from fae_toolkit.ui.i18n import i18n, tr
 
 _COLUMNS = ["id", "name", "type", "x", "y", "theta", "station"]
 _TYPE_COLORS = {
@@ -45,13 +41,15 @@ _TYPE_COLORS = {
 
 
 class TeachingView(QWidget):
-    """Self-contained teaching-point editor with a 2D map."""
+    """Editable teaching points on the left, a live 2D map on the right."""
 
     def __init__(self, parent: QWidget | None = None) -> None:
         super().__init__(parent)
         self._project = sample_project()
         self._loading = False
         self._build_ui()
+        i18n.subscribe(self.retranslate)
+        self.retranslate()
         self._reload()
 
     # --- UI construction -------------------------------------------------- #
@@ -65,32 +63,33 @@ class TeachingView(QWidget):
         root.addWidget(self._build_map(), stretch=1)
 
     def _build_toolbar(self) -> QGroupBox:
-        box = QGroupBox("프로젝트 (Project)")
-        layout = QVBoxLayout(box)
+        self.toolbar_box = QGroupBox()
+        layout = QVBoxLayout(self.toolbar_box)
         row1 = QHBoxLayout()
-        for label, slot in [
-            ("Sample", self._load_sample),
-            ("Open…", self._open),
-            ("Save…", self._save),
-            ("Export CSV…", self._export_csv),
-        ]:
-            btn = QPushButton(label)
-            btn.clicked.connect(slot)
-            row1.addWidget(btn)
+        self.btn_sample = QPushButton()
+        self.btn_sample.clicked.connect(self._load_sample)
+        self.btn_open = QPushButton()
+        self.btn_open.clicked.connect(self._open)
+        self.btn_save = QPushButton()
+        self.btn_save.clicked.connect(self._save)
+        self.btn_export = QPushButton()
+        self.btn_export.clicked.connect(self._export_csv)
+        for b in (self.btn_sample, self.btn_open, self.btn_save, self.btn_export):
+            row1.addWidget(b)
         row2 = QHBoxLayout()
-        for label, slot in [
-            ("Add point", self._add_point),
-            ("Delete point", self._delete_point),
-            ("Validate", self._validate),
-        ]:
-            btn = QPushButton(label)
-            btn.clicked.connect(slot)
-            row2.addWidget(btn)
+        self.btn_add = QPushButton()
+        self.btn_add.clicked.connect(self._add_point)
+        self.btn_delete = QPushButton()
+        self.btn_delete.clicked.connect(self._delete_point)
+        self.btn_validate = QPushButton()
+        self.btn_validate.clicked.connect(self._validate)
+        for b in (self.btn_add, self.btn_delete, self.btn_validate):
+            row2.addWidget(b)
         layout.addLayout(row1)
         layout.addLayout(row2)
         self.title_label = QLabel()
         layout.addWidget(self.title_label)
-        return box
+        return self.toolbar_box
 
     def _build_table(self) -> QTableWidget:
         self.table = QTableWidget(0, len(_COLUMNS))
@@ -103,18 +102,18 @@ class TeachingView(QWidget):
         return self.table
 
     def _build_log(self) -> QGroupBox:
-        box = QGroupBox("검증 / 로그 (Validation)")
-        layout = QVBoxLayout(box)
+        self.log_box = QGroupBox()
+        layout = QVBoxLayout(self.log_box)
         self.log_view = QPlainTextEdit()
         self.log_view.setReadOnly(True)
         self.log_view.setMaximumBlockCount(300)
         self.log_view.setFixedHeight(120)
         layout.addWidget(self.log_view)
-        return box
+        return self.log_box
 
     def _build_map(self) -> QWidget:
         pg.setConfigOptions(antialias=True)
-        self.plot = pg.PlotWidget(title="Teaching map (mm)")
+        self.plot = pg.PlotWidget()
         self.plot.setAspectLocked(True)
         self.plot.showGrid(x=True, y=True, alpha=0.3)
         self.plot.setLabel("bottom", "X", "mm")
@@ -128,7 +127,7 @@ class TeachingView(QWidget):
         self._log("loaded sample project")
 
     def _open(self) -> None:
-        path, _ = QFileDialog.getOpenFileName(self, "Open project", "", "JSON (*.json)")
+        path, _ = QFileDialog.getOpenFileName(self, tr("tm.btn_open"), "", "JSON (*.json)")
         if not path:
             return
         try:
@@ -141,7 +140,7 @@ class TeachingView(QWidget):
 
     def _save(self) -> None:
         path, _ = QFileDialog.getSaveFileName(
-            self, "Save project", "teaching.json", "JSON (*.json)"
+            self, tr("tm.btn_save"), "teaching.json", "JSON (*.json)"
         )
         if not path:
             return
@@ -149,7 +148,9 @@ class TeachingView(QWidget):
         self._log(f"saved {path}")
 
     def _export_csv(self) -> None:
-        path, _ = QFileDialog.getSaveFileName(self, "Export points", "points.csv", "CSV (*.csv)")
+        path, _ = QFileDialog.getSaveFileName(
+            self, tr("tm.btn_export"), "points.csv", "CSV (*.csv)"
+        )
         if not path:
             return
         export_points_csv(self._project, path)
@@ -186,7 +187,7 @@ class TeachingView(QWidget):
             values = [p.id, p.name, p.type.value, p.x, p.y, p.theta, p.station]
             for col, value in enumerate(values):
                 item = QTableWidgetItem(str(value))
-                if col == 0:  # id is read-only
+                if col == 0:
                     item.setFlags(item.flags() & ~Qt.ItemFlag.ItemIsEditable)
                 self.table.setItem(row, col, item)
         self._loading = False
@@ -223,19 +224,17 @@ class TeachingView(QWidget):
             return None
         return self._project.points[rows[0].row()].id
 
-    # --- map rendering ---------------------------------------------------- #
+    # --- map -------------------------------------------------------------- #
     def _redraw_map(self) -> None:
         self.plot.clear()
         points = self._project.points
         by_id = {p.id: p for p in points}
-
         for route in self._project.routes:
             coords = [(by_id[i].x, by_id[i].y) for i in route.point_ids if i in by_id]
             if len(coords) >= 2:
-                xs = [c[0] for c in coords]
-                ys = [c[1] for c in coords]
-                self.plot.plot(xs, ys, pen=pg.mkPen("#7f8c8d", width=2))
-
+                self.plot.plot(
+                    [c[0] for c in coords], [c[1] for c in coords], pen=pg.mkPen("#7f8c8d", width=2)
+                )
         if points:
             spots = [
                 {
@@ -251,24 +250,36 @@ class TeachingView(QWidget):
                 label = pg.TextItem(p.name, color="#ddd", anchor=(0, 1))
                 label.setPos(p.x, p.y)
                 self.plot.addItem(label)
-
         selected = self._selected_point_id()
         if selected is not None and selected in by_id:
             p = by_id[selected]
-            ring = pg.ScatterPlotItem(
-                [
-                    {
-                        "pos": (p.x, p.y),
-                        "size": 26,
-                        "brush": None,
-                        "pen": pg.mkPen("#f1c40f", width=3),
-                    }
-                ]
+            self.plot.addItem(
+                pg.ScatterPlotItem(
+                    [
+                        {
+                            "pos": (p.x, p.y),
+                            "size": 26,
+                            "brush": None,
+                            "pen": pg.mkPen("#f1c40f", width=3),
+                        }
+                    ]
+                )
             )
-            self.plot.addItem(ring)
 
     def _log(self, message: str) -> None:
         self.log_view.appendPlainText(message)
 
-    def shutdown(self) -> None:  # symmetry with the other views
+    def retranslate(self) -> None:
+        self.toolbar_box.setTitle(tr("tm.group_project"))
+        self.log_box.setTitle(tr("tm.group_validation"))
+        self.btn_sample.setText(tr("tm.btn_sample"))
+        self.btn_open.setText(tr("tm.btn_open"))
+        self.btn_save.setText(tr("tm.btn_save"))
+        self.btn_export.setText(tr("tm.btn_export"))
+        self.btn_add.setText(tr("tm.btn_add"))
+        self.btn_delete.setText(tr("tm.btn_delete"))
+        self.btn_validate.setText(tr("tm.btn_validate"))
+        self.plot.setTitle(tr("tm.map_title"))
+
+    def shutdown(self) -> None:
         pass

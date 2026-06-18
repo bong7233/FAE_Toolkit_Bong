@@ -210,20 +210,25 @@ jobs:
       - name: Build CLI executable
         run: pyinstaller --noconfirm --onefile --name fae-toolkit --paths src packaging/cli_entry.py
 
-      - name: Build GUI executable
-        run: pyinstaller --noconfirm --onefile --name fae-toolkit-gui --paths src --hidden-import can.interfaces.virtual packaging/gui_entry.py
+      - name: Build Comm Tester GUI executable
+        run: pyinstaller --noconfirm --onefile --name comm-tester --paths src --hidden-import can.interfaces.virtual packaging/gui_entry.py
+
+      - name: Build TeachingManager executable
+        run: pyinstaller --noconfirm --onefile --name teaching-manager --paths src packaging/teaching_entry.py
 
       - name: Smoke-test the bundles
         env:
           QT_QPA_PLATFORM: offscreen
         run: |
           "./dist/fae-toolkit${{ matrix.ext }}" --version
-          "./dist/fae-toolkit-gui${{ matrix.ext }}" --self-test
+          "./dist/comm-tester${{ matrix.ext }}" --self-test
+          "./dist/teaching-manager${{ matrix.ext }}" --self-test
 
       - name: Rename artifacts
         run: |
           mv "dist/fae-toolkit${{ matrix.ext }}" "dist/fae-toolkit-cli-${{ matrix.suffix }}${{ matrix.ext }}"
-          mv "dist/fae-toolkit-gui${{ matrix.ext }}" "dist/fae-toolkit-gui-${{ matrix.suffix }}${{ matrix.ext }}"
+          mv "dist/comm-tester${{ matrix.ext }}" "dist/comm-tester-${{ matrix.suffix }}${{ matrix.ext }}"
+          mv "dist/teaching-manager${{ matrix.ext }}" "dist/teaching-manager-${{ matrix.suffix }}${{ matrix.ext }}"
 
       - name: Upload build artifacts
         uses: actions/upload-artifact@v4
@@ -231,11 +236,13 @@ jobs:
           name: fae-toolkit-${{ matrix.suffix }}
           path: |
             dist/fae-toolkit-cli-${{ matrix.suffix }}${{ matrix.ext }}
-            dist/fae-toolkit-gui-${{ matrix.suffix }}${{ matrix.ext }}
+            dist/comm-tester-${{ matrix.suffix }}${{ matrix.ext }}
+            dist/teaching-manager-${{ matrix.suffix }}${{ matrix.ext }}
 
       - name: Attach to GitHub Release
         uses: softprops/action-gh-release@v2
         with:
           files: |
             dist/fae-toolkit-cli-${{ matrix.suffix }}${{ matrix.ext }}
-            dist/fae-toolkit-gui-${{ matrix.suffix }}${{ matrix.ext }}
+            dist/comm-tester-${{ matrix.suffix }}${{ matrix.ext }}
+            dist/teaching-manager-${{ matrix.suffix }}${{ matrix.ext }}

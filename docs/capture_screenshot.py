@@ -1,23 +1,21 @@
-"""Render the GUI tabs to PNGs without a display (offscreen Qt).
+"""Render the Comm Tester and TeachingManager to PNGs (offscreen Qt).
 
-Generates the README screenshots and acts as a quick visual smoke check::
-
-    QT_QPA_PLATFORM=offscreen python docs/capture_screenshot.py
+QT_QPA_PLATFORM=offscreen python docs/capture_screenshot.py
 """
 
 from __future__ import annotations
 
 import os
+import socket
 import sys
+import threading
 import time
 
 os.environ.setdefault("QT_QPA_PLATFORM", "offscreen")
 
 from PySide6.QtWidgets import QApplication  # noqa: E402
 
-from fae_toolkit.protocols.bms.model import BatteryFlag  # noqa: E402
-from fae_toolkit.protocols.io import io_map  # noqa: E402
-from fae_toolkit.ui.battery_view import SIM_LABEL  # noqa: E402
+from fae_toolkit.teaching_manager.main_window import MainWindow as TeachingWindow  # noqa: E402
 from fae_toolkit.ui.main_window import MainWindow  # noqa: E402
 
 
@@ -28,79 +26,94 @@ def _pump(app: QApplication, seconds: float) -> None:
         time.sleep(0.02)
 
 
-def _capture_battery(app: QApplication, window: MainWindow, out: str) -> None:
-    view = window.battery_view
-    view.port_combo.setCurrentText(SIM_LABEL)
-    view.interval_spin.setValue(100)
-    view._connect()
-    _pump(app, 2.0)
-    if view._sim is not None:
-        view._sim.set_load_current(-160.0)
-        view._sim.force_warning(BatteryFlag.OVER_TEMP)
-        view._log("scenario: heavy discharge + OVER_TEMP")
-    _pump(app, 2.0)
+def _free_port() -> int:
+    s = socket.socket()
+    s.bind(("127.0.0.1", 0))
+    port = s.getsockname()[1]
+    s.close()
+    return port
+
+
+def _start_echo_server(port: int) -> socket.socket:
+    srv = socket.socket()
+    srv.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
+    srv.bind(("127.0.0.1", port))
+    srv.listen(1)
+    srv.settimeout(5)
+
+    def run() -> None:
+        try:
+            conn, _ = srv.accept()
+        except OSError:
+            return
+        conn.settimeout(5)
+        while True:
+            try:
+                data = conn.recv(4096)
+            except OSError:
+                break
+            if not data:
+                break
+            conn.sendall(data)
+
+    threading.Thread(target=run, daemon=True).start()
+    return srv
+
+
+def _save(window, out: str) -> None:
     ok = window.grab().save(out, "PNG")
-    print(f"battery: saved={ok} -> {out}")
-    view.shutdown()
-
-
-def _capture_io(app: QApplication, window: MainWindow, tabs, out: str) -> None:
-    tabs.setCurrentIndex(1)
-    view = window.io_view
-    view.port_combo.setCurrentText(SIM_LABEL)
-    view.interval_spin.setValue(100)
-    view._connect()
-    _pump(app, 1.2)
-    view._on_output_clicked(io_map.DO_LOAD_CLAMP, True)
-    view._on_output_clicked(io_map.DO_LIFT_UP, True)
-    _pump(app, 1.2)
-    if view._sim is not None:
-        view._sim.trip_estop(True)
-        view._log("scenario: E-STOP tripped — interlock open")
-    _pump(app, 1.2)
-    ok = window.grab().save(out, "PNG")
-    print(f"io: saved={ok} -> {out}")
-    view.shutdown()
-
-
-def _capture_can(app: QApplication, window: MainWindow, tabs, out: str) -> None:
-    tabs.setCurrentIndex(2)
-    view = window.can_view
-    view.iface_combo.setCurrentText("virtual")
-    view.channel_edit.setText("fae_shot")
-    view.interval_spin.setValue(100)
-    view._connect()
-    _pump(app, 1.5)
-    if view._sim is not None:
-        view._sim.set_load_current(-160.0)
-        view._sim.force_warning(BatteryFlag.OVER_TEMP)
-        view._log("scenario: heavy discharge + OVER_TEMP")
-    _pump(app, 1.5)
-    ok = window.grab().save(out, "PNG")
-    print(f"can: saved={ok} -> {out}")
-    view.shutdown()
-
-
-def _capture_teaching(app: QApplication, window: MainWindow, tabs, out: str) -> None:
-    tabs.setCurrentIndex(3)
-    view = window.teaching_view
-    view.table.selectRow(4)  # highlight ST_A_LOAD on the map
-    view._validate()
-    _pump(app, 0.5)
-    ok = window.grab().save(out, "PNG")
-    print(f"teaching: saved={ok} -> {out}")
+    print(f"saved={ok} -> {out}")
 
 
 def main() -> int:
     app = QApplication.instance() or QApplication([])
     window = MainWindow()
-    window.resize(1180, 720)
+    window.resize(1100, 680)
     window.show()
-    tabs = window.centralWidget()
-    _capture_battery(app, window, "docs/screenshot_battery.png")
-    _capture_io(app, window, tabs, "docs/screenshot_io.png")
-    _capture_can(app, window, tabs, "docs/screenshot_can.png")
-    _capture_teaching(app, window, tabs, "docs/screenshot_teaching.png")
+    tabs = window._tabs
+
+    # Serial tab: show configured frame sender with a Modbus preset.
+    tabs.setCurrentIndex(0)
+    window.serial_tab.sender.format_combo.setCurrentText("HEX")
+    window.serial_tab.sender.input.setText("01 03 00 00 00 0A")
+    window.serial_tab.sender.cb_crc.setChecked(True)
+    _pump(app, 0.3)
+    _save(window, "docs/screenshot_comm_serial.png")
+
+    # TCP tab: live loopback against a local echo server.
+    port = _free_port()
+    srv = _start_echo_server(port)
+    tabs.setCurrentIndex(1)
+    tcp = window.tcp_tab
+    tcp._panel.mode.setCurrentIndex(0)  # client
+    tcp._panel.host.setText("127.0.0.1")
+    tcp._panel.port.setValue(port)
+    tcp._connect()
+    _pump(app, 0.5)
+    for payload in ("01 03 00 00 00 0A", "DE AD BE EF", "48 65 6C 6C 6F"):
+        tcp.sender.input.setText(payload)
+        tcp.sender.cb_crc.setChecked(False)
+        tcp.sender._emit()
+        _pump(app, 0.4)
+    _save(window, "docs/screenshot_comm_tcp.png")
+    tcp.shutdown()
+    srv.close()
+
+    # CAN tab: configuration view.
+    tabs.setCurrentIndex(3)
+    _pump(app, 0.2)
+    _save(window, "docs/screenshot_comm_can.png")
+    window.close()
+
+    # TeachingManager (separate app).
+    tm = TeachingWindow()
+    tm.resize(1100, 680)
+    tm.show()
+    tm.view.table.selectRow(4)
+    tm.view._validate()
+    _pump(app, 0.4)
+    _save(tm, "docs/screenshot_teaching.png")
+    tm.close()
     return 0
 
 
