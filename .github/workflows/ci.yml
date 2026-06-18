@@ -40,6 +40,10 @@ jobs:
       - name: Ruff format check
         run: ruff format --check .
 
+      - name: Install socat (Linux real-serial test)
+        if: runner.os == 'Linux'
+        run: sudo apt-get update && sudo apt-get install -y socat
+
       - name: Run tests
         run: pytest -q
 

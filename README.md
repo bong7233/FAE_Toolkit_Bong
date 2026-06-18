@@ -101,14 +101,18 @@ fae-toolkit-gui
 ```
 
 ### 실제 포트로 사용 (현업)
-실제 장비, 또는 가상 시리얼 포트 페어를 만들어 "진짜 포트" 경로로 테스트할 수 있습니다.
+실제 장비에 바로 연결하거나, 가상 시리얼 페어로 "진짜 포트" 경로를 시연할 수 있습니다.
 ```bash
-# Linux: 가상 시리얼 페어 생성
-socat -d -d pty,raw,echo=0 pty,raw,echo=0
-#  → /dev/pts/X 와 /dev/pts/Y 두 포트가 생성됨
-# Windows: com0com 으로 COM3<->COM4 페어 생성
+# 실제 장비
+fae-toolkit bms-demo --port /dev/ttyUSB0 --baudrate 9600   # (Windows: --port COM3)
+
+# 하드웨어 없이 실제 포트 경로 시연 (Linux, socat)
+socat -d -d PTY,link=/tmp/ttyA,raw,echo=0 PTY,link=/tmp/ttyB,raw,echo=0
+fae-toolkit bms-sim-serve --port /tmp/ttyA --baudrate 115200   # 시뮬레이터를 디바이스로 서빙
+fae-toolkit bms-demo      --port /tmp/ttyB --baudrate 115200   # 앱으로 연결
 ```
-한쪽 포트에 시뮬레이터를, 다른 쪽에 앱을 연결하면 실제 RS232/RS485 통신과 동일한 코드 경로로 동작합니다.
+시뮬레이터를 한쪽 포트에 띄우고 앱을 다른 쪽에 연결하면 실제 RS232/RS485와 **동일한 pyserial 경로**로
+동작합니다(이 흐름은 CI의 `test_serial_socat`이 자동 검증). 자세한 내용은 **[docs/HARDWARE.md](docs/HARDWARE.md)** 참고.
 
 ## 기술 스택
 

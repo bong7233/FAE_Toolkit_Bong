@@ -271,6 +271,34 @@ def run_can_demo(args: argparse.Namespace) -> int:
     return rc
 
 
+def run_bms_sim_serve(args: argparse.Namespace) -> int:
+    """Bind the BMS simulator to a real serial port so it acts as a device.
+
+    Point this at one end of a virtual serial pair (socat/com0com) or a real
+    RS-232/485 adapter, then connect any Modbus master (including
+    ``fae-toolkit bms-demo --port <other-end>``).
+    """
+    transport = SerialTransport(args.port, baudrate=args.baudrate)
+    transport.open()
+    sim = BmsSimulator(transport, unit_id=args.unit)
+    sim.start()
+    print(f"BMS simulator serving on {args.port} @ {args.baudrate} baud (unit {args.unit})")
+    print("Ctrl+C to stop" if args.duration <= 0 else f"running for {args.duration}s")
+    rc = 0
+    try:
+        if args.duration > 0:
+            time.sleep(args.duration)
+        else:
+            while True:
+                time.sleep(0.5)
+    except KeyboardInterrupt:
+        rc = 130
+    finally:
+        sim.stop()
+        transport.close()
+    return rc
+
+
 def _add_link_args(parser: argparse.ArgumentParser) -> None:
     parser.add_argument("--port", help="serial port (e.g. COM3 or /dev/ttyUSB0); omit to simulate")
     parser.add_argument("--baudrate", type=int, default=9600)
@@ -299,6 +327,13 @@ def build_parser() -> argparse.ArgumentParser:
     teaching = sub.add_parser("teaching-demo", help="build and validate a sample teaching project")
     teaching.add_argument("--out", help="write the project to this .json (and a .csv next to it)")
     teaching.set_defaults(func=run_teaching_demo)
+
+    serve = sub.add_parser("bms-sim-serve", help="run the BMS simulator on a real serial port")
+    serve.add_argument("--port", required=True, help="serial port (e.g. /dev/pts/3, COM4)")
+    serve.add_argument("--baudrate", type=int, default=9600)
+    serve.add_argument("--unit", type=int, default=1, help="Modbus unit id")
+    serve.add_argument("--duration", type=float, default=0.0, help="run seconds (0 = until Ctrl+C)")
+    serve.set_defaults(func=run_bms_sim_serve)
 
     can_demo = sub.add_parser("can-demo", help="read a CAN BMS (virtual bus or real interface)")
     can_demo.add_argument("--interface", default="virtual", help="python-can interface")
