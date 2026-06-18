@@ -91,6 +91,41 @@ jobs:
       - name: Test (CTest)
         run: ctest --test-dir cpp/build -C Release --output-on-failure
 
+  ros2-build:
+    name: ROS 2 bridge build (Humble)
+    # Builds the ament_python bridge package inside the official ROS 2 image and
+    # smoke-imports the nodes. ROS 2 is Linux-only by design.
+    runs-on: ubuntu-latest
+    container: ros:humble
+    timeout-minutes: 25
+    steps:
+      - name: Install git (for checkout)
+        run: apt-get update && apt-get install -y git
+
+      - uses: actions/checkout@v4
+
+      - name: Install build tools
+        run: apt-get install -y python3-colcon-common-extensions python3-pip
+
+      - name: Install toolkit (for runtime imports)
+        run: pip3 install -e .
+
+      - name: colcon build
+        shell: bash
+        run: |
+          . /opt/ros/humble/setup.sh
+          mkdir -p ws/src
+          cp -r ros2_bridge ws/src/fae_ros2_bridge
+          cd ws
+          colcon build --packages-select fae_ros2_bridge
+
+      - name: Node import smoke test
+        shell: bash
+        run: |
+          . /opt/ros/humble/setup.sh
+          . ws/install/setup.sh
+          python3 -c "import fae_ros2_bridge.bms_publisher, fae_ros2_bridge.io_publisher; print('import OK')"
+
   package:
     name: Package executable (${{ matrix.os }})
     # Continuous Delivery: on a version tag, build standalone executables for

@@ -45,7 +45,7 @@
 | ② IO / Modbus 통신 테스트 | 디지털/아날로그 IO 읽기·쓰기, PIO·인터락 조건 진단 | ✅ 동작 (CLI+GUI, 시뮬레이터) |
 | ③ 티칭 포인트 관리(심화) | 노드/루트·Load/Unload 포인트 관리·2D 시각화·검증·Import/Export | ✅ 동작 (GUI 2D 맵, JSON/CSV) |
 | C++ 코어 (CMake) | CRC/Modbus 코어를 C++17로 구현, 양 OS 빌드/테스트 | ✅ 동작 (CMake+CTest, 양 OS CI) |
-| ROS2 브릿지 | 텔레메트리를 ROS2 토픽으로 퍼블리시 (Linux) | 🗓️ 선택 |
+| ROS2 브릿지 | 텔레메트리를 ROS2 토픽으로 퍼블리시 (Linux) | ✅ 동작 (ament_python, colcon CI) |
 
 ## 아키텍처
 
@@ -106,9 +106,10 @@ socat -d -d pty,raw,echo=0 pty,raw,echo=0
 
 - **언어/런타임**: Python 3.10+ (주력), C++17/CMake (CRC·Modbus 코어, 신뢰도 축)
 - **GUI**: PySide6 (Qt 6) + pyqtgraph (실시간 플롯)
-- **통신**: pyserial (RS232/RS485), CAN/Modbus (예정)
+- **통신**: pyserial (RS232/RS485), Modbus RTU (자체 구현), CAN (예정)
+- **ROS 2**: rclpy 브릿지 노드 (Humble, ament_python) — 리눅스
 - **품질**: pytest, ruff(lint/format)
-- **CI/CD**: GitHub Actions (Windows + Linux 매트릭스), PyInstaller 패키징
+- **CI/CD**: GitHub Actions (Windows + Linux 매트릭스 · C++ · ROS 2), PyInstaller 패키징
 
 ## 프로젝트 구조
 
@@ -122,6 +123,7 @@ src/fae_toolkit/
 └── cli.py         헤드리스 데모/자동화 진입점
 tests/             pytest (하드웨어 불필요)
 cpp/               C++17 프로토콜 코어 (CRC/Modbus) + CMake/CTest
+ros2_bridge/       ROS2(ament_python) 브릿지 — BMS/IO → ROS2 토픽
 .github/workflows/ CI/CD
 ```
 
@@ -134,7 +136,7 @@ cpp/               C++17 프로토콜 코어 (CRC/Modbus) + CMake/CTest
 - [x] ③ 티칭 포인트 관리(심화): 모델/검증 + 2D 맵 GUI + JSON/CSV
 - [x] C++ 프로토콜 코어(CRC/Modbus) + CMake + CTest (양 OS CI)
 - [ ] C++ ↔ Python pybind11 연동
-- [ ] ROS2 브릿지 노드 (Linux)
+- [x] ROS2 브릿지 노드 (ament_python, colcon CI)
 
 ## 저자
 
