@@ -49,3 +49,38 @@ class BmsPollWorker(QObject):
             self.telemetry.emit(self._client.read_telemetry())
         except Exception as exc:  # surfaced in the UI, never crashes the worker
             self.error.emit(f"{type(exc).__name__}: {exc}")
+
+
+class PollWorker(QObject):
+    """Generic timer-driven poller: calls ``read_fn`` and emits the result.
+
+    Used by views whose payload is not battery telemetry (e.g. the IO snapshot).
+    """
+
+    result = Signal(object)
+    error = Signal(str)
+
+    def __init__(self, read_fn, interval_ms: int = 500) -> None:
+        super().__init__()
+        self._read_fn = read_fn
+        self._interval_ms = interval_ms
+        self._timer: QTimer | None = None
+
+    @Slot()
+    def start(self) -> None:
+        self._timer = QTimer()
+        self._timer.setInterval(self._interval_ms)
+        self._timer.timeout.connect(self._poll)
+        self._timer.start()
+
+    @Slot()
+    def stop(self) -> None:
+        if self._timer is not None:
+            self._timer.stop()
+            self._timer = None
+
+    def _poll(self) -> None:
+        try:
+            self.result.emit(self._read_fn())
+        except Exception as exc:
+            self.error.emit(f"{type(exc).__name__}: {exc}")
