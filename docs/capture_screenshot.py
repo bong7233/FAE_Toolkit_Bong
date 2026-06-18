@@ -63,8 +63,26 @@ def _capture_io(app: QApplication, window: MainWindow, tabs, out: str) -> None:
     view.shutdown()
 
 
-def _capture_teaching(app: QApplication, window: MainWindow, tabs, out: str) -> None:
+def _capture_can(app: QApplication, window: MainWindow, tabs, out: str) -> None:
     tabs.setCurrentIndex(2)
+    view = window.can_view
+    view.iface_combo.setCurrentText("virtual")
+    view.channel_edit.setText("fae_shot")
+    view.interval_spin.setValue(100)
+    view._connect()
+    _pump(app, 1.5)
+    if view._sim is not None:
+        view._sim.set_load_current(-160.0)
+        view._sim.force_warning(BatteryFlag.OVER_TEMP)
+        view._log("scenario: heavy discharge + OVER_TEMP")
+    _pump(app, 1.5)
+    ok = window.grab().save(out, "PNG")
+    print(f"can: saved={ok} -> {out}")
+    view.shutdown()
+
+
+def _capture_teaching(app: QApplication, window: MainWindow, tabs, out: str) -> None:
+    tabs.setCurrentIndex(3)
     view = window.teaching_view
     view.table.selectRow(4)  # highlight ST_A_LOAD on the map
     view._validate()
@@ -81,6 +99,7 @@ def main() -> int:
     tabs = window.centralWidget()
     _capture_battery(app, window, "docs/screenshot_battery.png")
     _capture_io(app, window, tabs, "docs/screenshot_io.png")
+    _capture_can(app, window, tabs, "docs/screenshot_can.png")
     _capture_teaching(app, window, tabs, "docs/screenshot_teaching.png")
     return 0
 

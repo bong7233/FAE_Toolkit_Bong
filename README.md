@@ -27,6 +27,11 @@
 > ② IO/Modbus 통신 테스트 모듈 — 디지털 입력(센서/PIO)·출력(액추에이터/시그널타워)·아날로그를
 > 진단하고, **인터락**을 시연한 화면(E-STOP 트립 → 모션 출력 거부, 빨간 시그널). 하드웨어 없이 실행됩니다.
 
+![CAN BMS test module](docs/screenshot_can.png)
+
+> CAN BMS 테스트 모듈 — python-can 가상 버스로 주기 브로드캐스트를 수신·디코딩하고,
+> 전압/전류 트렌드와 알람을 표시한 화면(시리얼이 아닌 CAN 버스 경험).
+
 ![Teaching point management module](docs/screenshot_teaching.png)
 
 > ③ 티칭 포인트 관리(심화) — 노드/루트를 2D 맵으로 시각화하고, 포인트(Load/Unload/Charge 등)를

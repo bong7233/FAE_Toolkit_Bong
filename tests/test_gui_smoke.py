@@ -65,6 +65,23 @@ def test_io_view_updates_against_simulator(qapp):
     assert not view._connected
 
 
+def test_can_view_updates_against_simulator(qapp):
+    window = MainWindow()
+    view = window.can_view
+    view.iface_combo.setCurrentText("virtual")
+    view.channel_edit.setText("fae_smoke")
+    view.interval_spin.setValue(100)
+    view._connect()
+    assert view._connected
+
+    _pump_until(qapp, lambda: view._values["voltage"].text() != "—")
+
+    assert view._values["voltage"].text() != "—"
+
+    view.shutdown()
+    assert not view._connected
+
+
 def test_teaching_view_loads_and_validates(qapp):
     window = MainWindow()
     view = window.teaching_view
