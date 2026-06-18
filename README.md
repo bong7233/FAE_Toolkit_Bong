@@ -77,6 +77,15 @@
 
 핵심 설계 원칙: **통신/프로토콜 로직을 GUI와 완전히 분리**하여, 대부분의 로직을 디스플레이 없이 `pytest`로 검증합니다(CI 친화적). GUI는 얇은 표현 계층입니다.
 
+## 다운로드 (Releases)
+
+설치 없이 바로 쓰는 단독 실행파일(Windows/Linux, CLI·GUI)은 **[Releases](https://github.com/bong7233/FAE_Toolkit_Bong/releases)** 에서 받을 수 있습니다.
+`v*` 태그를 푸시하면 GitHub Actions가 4종 바이너리를 자동 빌드·스모크테스트 후 릴리스에 첨부합니다(CD).
+
+```bash
+git tag -a v0.1.0 -m "FAE Toolkit v0.1.0" && git push origin v0.1.0
+```
+
 ## 빠른 시작
 
 ### 설치
