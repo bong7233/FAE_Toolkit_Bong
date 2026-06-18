@@ -4,8 +4,8 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "fae-toolkit"
-version = "0.1.0"
-description = "Cross-platform field engineering toolkit for industrial device communication testing (BMS / IO / teaching), with built-in device simulators."
+version = "0.2.0"
+description = "Cross-platform comm tester (Serial/TCP/UDP/CAN) for industrial device testing, with a Modbus decoder, per-maker saved frames, a TeachingManager app and device emulators."
 readme = "README.md"
 requires-python = ">=3.10"
 license = { text = "MIT" }
