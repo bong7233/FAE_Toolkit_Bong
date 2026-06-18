@@ -39,7 +39,7 @@
 | ① 배터리(BMS) 통신 테스트 | 요청 프레임 송신 → 응답 수신·파싱 → 전압/전류/SOC/온도/알람 실시간 표시·로깅, 고장 주입 | ✅ 동작 (CLI+GUI, 시뮬레이터) |
 | ② IO / Modbus 통신 테스트 | 디지털/아날로그 IO 읽기·쓰기, PIO·인터락 조건 진단 | ✅ 동작 (CLI+GUI, 시뮬레이터) |
 | ③ 티칭 포인트 관리(심화) | 노드/루트·Load/Unload 포인트 관리·시각화·버전관리·Import/Export | 🗓️ 예정 |
-| C++(Qt) 액센트 | 프로토콜 파서/CRC 코어를 C++/CMake로 구현, 양 OS 빌드 | 🗓️ 예정 |
+| C++ 코어 (CMake) | CRC/Modbus 코어를 C++17로 구현, 양 OS 빌드/테스트 | ✅ 동작 (CMake+CTest, 양 OS CI) |
 | ROS2 브릿지 | 텔레메트리를 ROS2 토픽으로 퍼블리시 (Linux) | 🗓️ 선택 |
 
 ## 아키텍처
@@ -99,7 +99,7 @@ socat -d -d pty,raw,echo=0 pty,raw,echo=0
 
 ## 기술 스택
 
-- **언어/런타임**: Python 3.10+ (주력), C++/CMake (예정, 신뢰도 축)
+- **언어/런타임**: Python 3.10+ (주력), C++17/CMake (CRC·Modbus 코어, 신뢰도 축)
 - **GUI**: PySide6 (Qt 6) + pyqtgraph (실시간 플롯)
 - **통신**: pyserial (RS232/RS485), CAN/Modbus (예정)
 - **품질**: pytest, ruff(lint/format)
@@ -116,7 +116,7 @@ src/fae_toolkit/
 ├── ui/            PySide6 데스크톱 앱
 └── cli.py         헤드리스 데모/자동화 진입점
 tests/             pytest (하드웨어 불필요)
-cpp/               C++(Qt) 액센트 (예정)
+cpp/               C++17 프로토콜 코어 (CRC/Modbus) + CMake/CTest
 .github/workflows/ CI/CD
 ```
 
@@ -127,7 +127,8 @@ cpp/               C++(Qt) 액센트 (예정)
 - [x] CD: 태그 시 양 OS 실행파일 자동 빌드/릴리스 (워크플로우 구성)
 - [x] ② IO/Modbus 모듈: 코덱(coils/DI/AI) + 인터락 시뮬레이터 + CLI + GUI
 - [ ] ③ 티칭 포인트 관리(심화)
-- [ ] C++(Qt) 프로토콜 코어 + pybind11 연동
+- [x] C++ 프로토콜 코어(CRC/Modbus) + CMake + CTest (양 OS CI)
+- [ ] C++ ↔ Python pybind11 연동
 - [ ] ROS2 브릿지 노드 (Linux)
 
 ## 저자

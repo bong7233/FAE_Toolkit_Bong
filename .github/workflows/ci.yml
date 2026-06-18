@@ -70,6 +70,27 @@ jobs:
           QT_QPA_PLATFORM: offscreen
         run: pytest -q tests/test_gui_smoke.py
 
+  cpp-build:
+    name: C++ build & test (${{ matrix.os }})
+    # Builds the C++/CMake protocol core with MSVC on Windows and GCC on Linux.
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, windows-latest]
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Configure (CMake)
+        run: cmake -S cpp -B cpp/build -DCMAKE_BUILD_TYPE=Release
+
+      - name: Build
+        run: cmake --build cpp/build --config Release
+
+      - name: Test (CTest)
+        run: ctest --test-dir cpp/build -C Release --output-on-failure
+
   package:
     name: Package executable (${{ matrix.os }})
     # Continuous Delivery: on a version tag, build standalone executables for
