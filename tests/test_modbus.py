@@ -75,3 +75,48 @@ def test_process_write_single_register():
 def test_exception_from_code():
     assert isinstance(modbus.ModbusException.from_code(0x02), modbus.IllegalDataAddress)
     assert isinstance(modbus.ModbusException.from_code(0x99), modbus.ModbusException)
+
+
+def test_pack_unpack_bits_roundtrip():
+    bits = [True, False, True, True, False, False, False, True, True, False]
+    packed = modbus.pack_bits(bits)
+    assert len(packed) == 2  # ceil(10 / 8)
+    assert modbus.unpack_bits(packed, len(bits)) == bits
+
+
+def test_process_read_coils():
+    bits = [True, False, True, False, True, True, False, False, True, True]
+    request = modbus.append_crc(struct.pack(">BBHH", 1, modbus.READ_COILS, 0, len(bits)))
+    response = modbus.process_request(request, 1, read_coils=lambda s, c: bits[s : s + c])
+    assert response is not None
+    assert response[1] == modbus.READ_COILS
+    assert response[2] == 2
+    assert check_crc(response)
+    assert modbus.unpack_bits(response[3 : 3 + response[2]], len(bits)) == bits
+
+
+def test_process_read_discrete_inputs_without_callback_is_exception():
+    request = modbus.append_crc(struct.pack(">BBHH", 1, modbus.READ_DISCRETE_INPUTS, 0, 4))
+    response = modbus.process_request(request, 1)
+    assert response is not None
+    assert response[1] == (modbus.READ_DISCRETE_INPUTS | 0x80)
+    assert response[2] == modbus.IllegalFunction.code
+
+
+def test_process_read_input_registers():
+    request = modbus.append_crc(struct.pack(">BBHH", 1, modbus.READ_INPUT_REGISTERS, 0, 3))
+    response = modbus.process_request(request, 1, read_input=lambda s, c: [10, 20, 30])
+    assert response is not None
+    assert response[1] == modbus.READ_INPUT_REGISTERS
+    values = [struct.unpack_from(">H", response, 3 + 2 * i)[0] for i in range(3)]
+    assert values == [10, 20, 30]
+
+
+def test_process_write_single_coil():
+    writes: dict[int, bool] = {}
+    request = modbus.append_crc(struct.pack(">BBHH", 1, modbus.WRITE_SINGLE_COIL, 5, 0xFF00))
+    response = modbus.process_request(
+        request, 1, write_coil=lambda addr, on: writes.__setitem__(addr, on)
+    )
+    assert writes == {5: True}
+    assert response == request

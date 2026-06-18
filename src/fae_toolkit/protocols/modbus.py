@@ -6,7 +6,11 @@ toolkit dependency-light and documents the exact bytes on the wire.
 
 Supported function codes:
 
-* ``0x03`` Read Holding Registers
+* ``0x01`` Read Coils                (digital outputs read-back)
+* ``0x02`` Read Discrete Inputs      (digital inputs / sensors / PIO)
+* ``0x03`` Read Holding Registers    (config / analog as 16-bit)
+* ``0x04`` Read Input Registers      (analog inputs)
+* ``0x05`` Write Single Coil         (set a digital output)
 * ``0x06`` Write Single Register
 
 Both the client helpers (used by the application) and :func:`process_request`
@@ -20,9 +24,16 @@ import struct
 from fae_toolkit.core.crc import append_crc, check_crc
 from fae_toolkit.core.transport import Transport, read_exact
 
+READ_COILS = 0x01
+READ_DISCRETE_INPUTS = 0x02
 READ_HOLDING_REGISTERS = 0x03
+READ_INPUT_REGISTERS = 0x04
+WRITE_SINGLE_COIL = 0x05
 WRITE_SINGLE_REGISTER = 0x06
 _EXCEPTION_MASK = 0x80
+
+_COIL_ON = 0xFF00
+_COIL_OFF = 0x0000
 
 
 class ModbusError(Exception):
@@ -64,6 +75,23 @@ _EXCEPTION_BY_CODE = {
 
 
 # --------------------------------------------------------------------------- #
+# Bit packing helpers (coils / discrete inputs)
+# --------------------------------------------------------------------------- #
+def pack_bits(bits: list[bool]) -> bytes:
+    """Pack booleans into bytes, LSB-first (Modbus coil order)."""
+    out = bytearray((len(bits) + 7) // 8)
+    for i, bit in enumerate(bits):
+        if bit:
+            out[i // 8] |= 1 << (i % 8)
+    return bytes(out)
+
+
+def unpack_bits(data: bytes, count: int) -> list[bool]:
+    """Unpack *count* LSB-first booleans from *data*."""
+    return [bool((data[i // 8] >> (i % 8)) & 1) for i in range(count)]
+
+
+# --------------------------------------------------------------------------- #
 # Request builders (client side)
 # --------------------------------------------------------------------------- #
 def build_read_holding_registers(unit: int, start: int, count: int) -> bytes:
@@ -79,31 +107,21 @@ def build_write_single_register(unit: int, address: int, value: int) -> bytes:
 # --------------------------------------------------------------------------- #
 # Client transactions
 # --------------------------------------------------------------------------- #
-def read_holding_registers(
-    transport: Transport,
-    unit: int,
-    start: int,
-    count: int,
-    timeout: float = 1.0,
+def _read_registers(
+    transport: Transport, unit: int, func: int, start: int, count: int, timeout: float
 ) -> list[int]:
-    """Perform a Read-Holding-Registers transaction and return register values.
-
-    Raises :class:`ModbusException` on a device exception response,
-    :class:`ModbusError` on framing/CRC errors, and
-    :class:`~fae_toolkit.core.transport.TransportTimeout` on no/short reply.
-    """
     transport.reset_input()
-    transport.write(build_read_holding_registers(unit, start, count))
+    transport.write(append_crc(struct.pack(">BBHH", unit, func, start, count)))
 
     header = read_exact(transport, 2, timeout)  # unit, function
-    func = header[1]
-    if func == (READ_HOLDING_REGISTERS | _EXCEPTION_MASK):
-        rest = read_exact(transport, 3, timeout)  # exception code + CRC
+    rfunc = header[1]
+    if rfunc == (func | _EXCEPTION_MASK):
+        rest = read_exact(transport, 3, timeout)
         if not check_crc(header + rest):
             raise ModbusError("CRC error in exception response")
         raise ModbusException.from_code(rest[0])
-    if func != READ_HOLDING_REGISTERS:
-        raise ModbusError(f"unexpected function 0x{func:02X}")
+    if rfunc != func:
+        raise ModbusError(f"unexpected function 0x{rfunc:02X}")
     if header[0] != unit:
         raise ModbusError(f"unexpected unit id {header[0]}")
 
@@ -111,30 +129,101 @@ def read_holding_registers(
     if byte_count != count * 2:
         raise ModbusError(f"unexpected byte count {byte_count}")
     payload = read_exact(transport, byte_count + 2, timeout)  # data + CRC
-    frame = header + bytes([byte_count]) + payload
-    if not check_crc(frame):
+    if not check_crc(header + bytes([byte_count]) + payload):
         raise ModbusError("CRC error in response")
     data = payload[:byte_count]
     return [struct.unpack_from(">H", data, i)[0] for i in range(0, byte_count, 2)]
 
 
-def write_single_register(
-    transport: Transport,
-    unit: int,
-    address: int,
-    value: int,
-    timeout: float = 1.0,
-) -> None:
+def read_holding_registers(
+    transport: Transport, unit: int, start: int, count: int, timeout: float = 1.0
+) -> list[int]:
+    """Read holding registers (function 0x03)."""
+    return _read_registers(transport, unit, READ_HOLDING_REGISTERS, start, count, timeout)
+
+
+def read_input_registers(
+    transport: Transport, unit: int, start: int, count: int, timeout: float = 1.0
+) -> list[int]:
+    """Read input registers (function 0x04)."""
+    return _read_registers(transport, unit, READ_INPUT_REGISTERS, start, count, timeout)
+
+
+def _read_bits(
+    transport: Transport, unit: int, func: int, start: int, count: int, timeout: float
+) -> list[bool]:
     transport.reset_input()
-    request = build_write_single_register(unit, address, value)
+    transport.write(append_crc(struct.pack(">BBHH", unit, func, start, count)))
+
+    header = read_exact(transport, 2, timeout)
+    rfunc = header[1]
+    if rfunc == (func | _EXCEPTION_MASK):
+        rest = read_exact(transport, 3, timeout)
+        if not check_crc(header + rest):
+            raise ModbusError("CRC error in exception response")
+        raise ModbusException.from_code(rest[0])
+    if rfunc != func:
+        raise ModbusError(f"unexpected function 0x{rfunc:02X}")
+    if header[0] != unit:
+        raise ModbusError(f"unexpected unit id {header[0]}")
+
+    byte_count = read_exact(transport, 1, timeout)[0]
+    if byte_count != (count + 7) // 8:
+        raise ModbusError(f"unexpected byte count {byte_count}")
+    payload = read_exact(transport, byte_count + 2, timeout)
+    if not check_crc(header + bytes([byte_count]) + payload):
+        raise ModbusError("CRC error in response")
+    return unpack_bits(payload[:byte_count], count)
+
+
+def read_coils(
+    transport: Transport, unit: int, start: int, count: int, timeout: float = 1.0
+) -> list[bool]:
+    """Read coils / digital outputs (function 0x01)."""
+    return _read_bits(transport, unit, READ_COILS, start, count, timeout)
+
+
+def read_discrete_inputs(
+    transport: Transport, unit: int, start: int, count: int, timeout: float = 1.0
+) -> list[bool]:
+    """Read discrete inputs / sensors (function 0x02)."""
+    return _read_bits(transport, unit, READ_DISCRETE_INPUTS, start, count, timeout)
+
+
+def _write(transport: Transport, request: bytes, func: int, timeout: float) -> None:
+    """Send a write request and validate the echo, handling exception replies."""
+    transport.reset_input()
     transport.write(request)
-    echo = read_exact(transport, 8, timeout)
+    header = read_exact(transport, 2, timeout)  # unit, function
+    if header[1] == (func | _EXCEPTION_MASK):
+        rest = read_exact(transport, 3, timeout)  # exception code + CRC (5-byte reply)
+        if not check_crc(header + rest):
+            raise ModbusError("CRC error in exception response")
+        raise ModbusException.from_code(rest[0])
+    echo = header + read_exact(transport, 6, timeout)  # rest of the 8-byte echo
     if not check_crc(echo):
         raise ModbusError("CRC error in write response")
-    if echo[1] == (WRITE_SINGLE_REGISTER | _EXCEPTION_MASK):
-        raise ModbusException.from_code(echo[2])
     if echo[:6] != request[:6]:
         raise ModbusError("write echo mismatch")
+
+
+def write_single_register(
+    transport: Transport, unit: int, address: int, value: int, timeout: float = 1.0
+) -> None:
+    """Write a single holding register (function 0x06)."""
+    _write(
+        transport, build_write_single_register(unit, address, value), WRITE_SINGLE_REGISTER, timeout
+    )
+
+
+def write_single_coil(
+    transport: Transport, unit: int, address: int, on: bool, timeout: float = 1.0
+) -> None:
+    """Write a single coil / digital output (function 0x05)."""
+    request = append_crc(
+        struct.pack(">BBHH", unit, WRITE_SINGLE_COIL, address, _COIL_ON if on else _COIL_OFF)
+    )
+    _write(transport, request, WRITE_SINGLE_COIL, timeout)
 
 
 # --------------------------------------------------------------------------- #
@@ -142,7 +231,14 @@ def write_single_register(
 # --------------------------------------------------------------------------- #
 def request_length(function: int) -> int:
     """Expected on-the-wire length of a request frame for *function*."""
-    if function in (READ_HOLDING_REGISTERS, WRITE_SINGLE_REGISTER):
+    if function in (
+        READ_COILS,
+        READ_DISCRETE_INPUTS,
+        READ_HOLDING_REGISTERS,
+        READ_INPUT_REGISTERS,
+        WRITE_SINGLE_COIL,
+        WRITE_SINGLE_REGISTER,
+    ):
         return 8  # unit + func + 2x uint16 + CRC(2)
     return 0  # unknown
 
@@ -151,14 +247,19 @@ def process_request(
     frame: bytes,
     unit_id: int,
     *,
-    read_holding,
+    read_holding=None,
     write_holding=None,
+    read_input=None,
+    read_coils=None,
+    read_discrete=None,
+    write_coil=None,
 ) -> bytes | None:
     """Process a request *frame* and return a response frame.
 
     Returns ``None`` when the frame is not addressed to *unit_id* or has a bad
-    CRC (a real device would stay silent). ``read_holding(start, count)`` must
-    return a list of register values and may raise :class:`ModbusException`.
+    CRC (a real device would stay silent). Each ``read_*`` callback takes
+    ``(start, count)``; register callbacks return ``list[int]`` and bit
+    callbacks return ``list[bool]``. Callbacks may raise :class:`ModbusException`.
     """
     if len(frame) < 4 or not check_crc(frame):
         return None
@@ -166,17 +267,32 @@ def process_request(
         return None
     func = frame[1]
     try:
-        if func == READ_HOLDING_REGISTERS:
+        if func in (READ_HOLDING_REGISTERS, READ_INPUT_REGISTERS):
+            callback = read_holding if func == READ_HOLDING_REGISTERS else read_input
+            if callback is None:
+                raise IllegalFunction()
             _, _, start, count = struct.unpack(">BBHH", frame[:6])
-            regs = read_holding(start, count)
-            data = b"".join(struct.pack(">H", r & 0xFFFF) for r in regs)
+            data = b"".join(struct.pack(">H", r & 0xFFFF) for r in callback(start, count))
+            return append_crc(bytes([unit_id, func, len(data)]) + data)
+        if func in (READ_COILS, READ_DISCRETE_INPUTS):
+            callback = read_coils if func == READ_COILS else read_discrete
+            if callback is None:
+                raise IllegalFunction()
+            _, _, start, count = struct.unpack(">BBHH", frame[:6])
+            data = pack_bits(callback(start, count))
             return append_crc(bytes([unit_id, func, len(data)]) + data)
         if func == WRITE_SINGLE_REGISTER:
             if write_holding is None:
                 raise IllegalFunction()
             _, _, address, value = struct.unpack(">BBHH", frame[:6])
             write_holding(address, value)
-            return append_crc(frame[:6])  # echo request back
+            return append_crc(frame[:6])
+        if func == WRITE_SINGLE_COIL:
+            if write_coil is None:
+                raise IllegalFunction()
+            _, _, address, value = struct.unpack(">BBHH", frame[:6])
+            write_coil(address, value == _COIL_ON)
+            return append_crc(frame[:6])
         raise IllegalFunction()
     except ModbusException as exc:
         return append_crc(bytes([unit_id, func | _EXCEPTION_MASK, exc.code]))

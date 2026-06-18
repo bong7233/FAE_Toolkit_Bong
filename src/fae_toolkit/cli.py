@@ -15,8 +15,10 @@ import time
 from fae_toolkit import __version__
 from fae_toolkit.core.transport import SerialTransport, TransportTimeout, create_loopback_pair
 from fae_toolkit.protocols.bms import BatteryFlag, BmsClient
-from fae_toolkit.protocols.modbus import ModbusError
+from fae_toolkit.protocols.io import IoClient, io_map
+from fae_toolkit.protocols.modbus import ModbusError, ModbusException
 from fae_toolkit.sim.bms import BmsSimulator
+from fae_toolkit.sim.io import IoSimulator
 
 
 def _format_row(elapsed: float, tel) -> str:
@@ -101,6 +103,95 @@ def run_bms_demo(args: argparse.Namespace) -> int:
     return rc
 
 
+def _io_status_row(elapsed: float, snap) -> str:
+    lock = "OK  " if snap.interlock_ok else "OPEN"
+    di = ",".join(snap.active_inputs()) or "-"
+    do = ",".join(snap.active_outputs()) or "-"
+    return (
+        f"t={elapsed:5.1f}s  interlock={lock}  "
+        f"dist={snap.ai[io_map.AI_DISTANCE]:6.1f}mm  "
+        f"w={snap.ai[io_map.AI_WEIGHT]:4.1f}kg  "
+        f"DI[{di}]  DO[{do}]"
+    )
+
+
+def run_io_demo(args: argparse.Namespace) -> int:
+    if args.port:
+        transport = SerialTransport(args.port, baudrate=args.baudrate)
+        transport.open()
+        sim = None
+        print(f"IO demo on real port {args.port} @ {args.baudrate} baud (unit {args.unit})")
+    else:
+        app_end, dev_end = create_loopback_pair()
+        sim = IoSimulator(dev_end, unit_id=args.unit)
+        sim.start()
+        transport = app_end
+        print(f"IO demo on built-in simulator (unit {args.unit}) — no hardware required")
+
+    client = IoClient(transport, unit_id=args.unit, timeout=args.timeout)
+    print("-" * 96)
+
+    start = time.monotonic()
+    next_poll = start
+    done_steps = set()
+    rc = 0
+    try:
+        while True:
+            elapsed = time.monotonic() - start
+            if elapsed >= args.duration:
+                break
+
+            if sim is not None and "load" not in done_steps and elapsed >= args.duration * 0.25:
+                done_steps.add("load")
+                print(">> scenario: load handshake — clamp + lift up")
+                client.set_output(io_map.DO_LOAD_CLAMP, True)
+                client.set_output(io_map.DO_LIFT_UP, True)
+            if sim is not None and "estop" not in done_steps and elapsed >= args.duration * 0.5:
+                done_steps.add("estop")
+                print(">> scenario: E-STOP tripped — try to run conveyor (should be refused)")
+                sim.trip_estop(True)
+                try:
+                    client.set_output(io_map.DO_CONVEYOR, True)
+                    print("   conveyor turned ON (unexpected!)")
+                except ModbusException as exc:
+                    print(f"   interlock refused conveyor → {type(exc).__name__}")
+            if sim is not None and "clear" not in done_steps and elapsed >= args.duration * 0.75:
+                done_steps.add("clear")
+                print(">> scenario: clear E-STOP and retry conveyor")
+                sim.clear_faults()
+                client.set_output(io_map.DO_CONVEYOR, True)
+
+            try:
+                print(_io_status_row(elapsed, client.read_snapshot()))
+            except TransportTimeout:
+                print(f"t={elapsed:5.1f}s  [COMM] timeout — no response")
+            except ModbusError as exc:
+                print(f"t={elapsed:5.1f}s  [COMM] protocol error: {exc}")
+
+            next_poll += args.interval
+            time.sleep(max(0.0, next_poll - time.monotonic()))
+    except KeyboardInterrupt:
+        print("\ninterrupted")
+        rc = 130
+    finally:
+        if sim is not None:
+            sim.stop()
+        transport.close()
+
+    print("-" * 96)
+    print("done")
+    return rc
+
+
+def _add_link_args(parser: argparse.ArgumentParser) -> None:
+    parser.add_argument("--port", help="serial port (e.g. COM3 or /dev/ttyUSB0); omit to simulate")
+    parser.add_argument("--baudrate", type=int, default=9600)
+    parser.add_argument("--unit", type=int, default=1, help="Modbus unit id")
+    parser.add_argument("--interval", type=float, default=0.5, help="poll interval seconds")
+    parser.add_argument("--duration", type=float, default=10.0, help="run time seconds")
+    parser.add_argument("--timeout", type=float, default=1.0, help="per-read timeout seconds")
+
+
 def build_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(
         prog="fae-toolkit",
@@ -109,14 +200,13 @@ def build_parser() -> argparse.ArgumentParser:
     parser.add_argument("--version", action="version", version=f"%(prog)s {__version__}")
     sub = parser.add_subparsers(dest="command")
 
-    demo = sub.add_parser("bms-demo", help="poll a BMS (simulator or real port)")
-    demo.add_argument("--port", help="serial port (e.g. COM3 or /dev/ttyUSB0); omit to simulate")
-    demo.add_argument("--baudrate", type=int, default=9600)
-    demo.add_argument("--unit", type=int, default=1, help="Modbus unit id")
-    demo.add_argument("--interval", type=float, default=0.5, help="poll interval seconds")
-    demo.add_argument("--duration", type=float, default=10.0, help="run time seconds")
-    demo.add_argument("--timeout", type=float, default=1.0, help="per-read timeout seconds")
-    demo.set_defaults(func=run_bms_demo)
+    bms = sub.add_parser("bms-demo", help="poll a BMS (simulator or real port)")
+    _add_link_args(bms)
+    bms.set_defaults(func=run_bms_demo)
+
+    io = sub.add_parser("io-demo", help="exercise a remote-IO/PIO block (simulator or real port)")
+    _add_link_args(io)
+    io.set_defaults(func=run_io_demo)
     return parser
 
 
