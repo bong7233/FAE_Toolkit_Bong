@@ -72,3 +72,18 @@ def test_default_macros_are_valid():
     macros = default_macros()
     assert macros
     assert all(m.name and m.text for m in macros)
+    # Names are unique (so the store does not silently collapse seeds).
+    assert len({m.name for m in macros}) == len(macros)
+
+
+def test_default_modbus_macros_are_well_formed_frames():
+    from fae_toolkit.core.crc import append_crc
+    from fae_toolkit.core.hexfmt import parse_hex
+    from fae_toolkit.protocols.modbus import describe_frame
+
+    for m in default_macros():
+        if not m.append_crc:
+            continue
+        frame = append_crc(parse_hex(m.text))  # the sender appends CRC at send time
+        decoded = describe_frame(frame, response=False)
+        assert "CRC OK" in decoded  # round-trips through the decoder cleanly

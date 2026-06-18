@@ -123,34 +123,40 @@ class MacroStore:
 
 
 def default_macros() -> list[Macro]:
-    """A few illustrative macros seeded on first run."""
-    return [
+    """Field-realistic starter frames seeded on first run.
+
+    Grouped by typical FAE use case so the per-group filter is meaningful out of
+    the box.  All Modbus entries are RTU requests with ``append_crc`` enabled
+    (the 2-byte CRC is appended automatically on send), so they are ready to
+    fire at a device or one of the bundled emulators.  Users replace/extend
+    these with their own maker-specific frames.
+    """
+    # Modbus-RTU requests: (group, name, hex). is_hex + append_crc always on.
+    modbus = [
+        # BMS over RS-485 / Modbus-RTU
+        ("Modbus · BMS", "Read pack V/I/SOC block (0x03 ×10)", "01 03 00 00 00 0A"),
+        ("Modbus · BMS", "Read cell voltages (0x04 ×16)", "01 04 00 00 00 10"),
+        ("Modbus · BMS", "Read alarm/status coils (0x01 ×16)", "01 01 00 00 00 10"),
+        ("Modbus · BMS", "Write SOC-reset register (0x06)", "01 06 00 10 00 00"),
+        # Remote IO over Modbus-RTU
+        ("Modbus · IO", "Read digital inputs (0x02 ×8)", "01 02 00 00 00 08"),
+        ("Modbus · IO", "Read holding registers (0x03 ×4)", "01 03 00 00 00 04"),
+        ("Modbus · IO", "Set output coil #0 ON (0x05)", "01 05 00 00 FF 00"),
+        ("Modbus · IO", "Set output coil #0 OFF (0x05)", "01 05 00 00 00 00"),
+    ]
+    macros = [
+        Macro(name=name, text=text, is_hex=True, append_crc=True, group=group)
+        for group, name, text in modbus
+    ]
+    # ASCII / line-based instruments (newline-terminated, no CRC).
+    macros += [
+        Macro(name="AT ping", text="AT", is_hex=False, append_newline=True, group="ASCII"),
         Macro(
-            name="Modbus: Read 10 holding regs",
-            text="01 03 00 00 00 0A",
-            is_hex=True,
-            append_crc=True,
-            group="Modbus",
-        ),
-        Macro(
-            name="Modbus: Read 8 coils",
-            text="01 01 00 00 00 08",
-            is_hex=True,
-            append_crc=True,
-            group="Modbus",
-        ),
-        Macro(
-            name="Modbus: Write reg #0 = 1",
-            text="01 06 00 00 00 01",
-            is_hex=True,
-            append_crc=True,
-            group="Modbus",
-        ),
-        Macro(
-            name="ASCII: AT ping",
-            text="AT",
+            name="SCPI identify (*IDN?)",
+            text="*IDN?",
             is_hex=False,
             append_newline=True,
             group="ASCII",
         ),
     ]
+    return macros
