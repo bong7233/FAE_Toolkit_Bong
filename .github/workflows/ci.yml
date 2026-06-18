@@ -51,7 +51,7 @@ jobs:
     name: GUI smoke test (offscreen)
     # Builds the PySide6 GUI and drives it headlessly against the simulator.
     runs-on: ubuntu-latest
-    timeout-minutes: 20
+    timeout-minutes: 12
     steps:
       - uses: actions/checkout@v4
 

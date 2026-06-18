@@ -38,6 +38,7 @@ can = [
 dev = [
     "pytest>=7.4",
     "pytest-cov>=4.1",
+    "pytest-timeout>=2.1",
     "ruff>=0.4",
     "python-can>=4.0",
 ]
@@ -74,3 +75,6 @@ ignore = ["B008"]
 testpaths = ["tests"]
 addopts = "-ra"
 filterwarnings = ["ignore::DeprecationWarning"]
+# Fail a hung test fast (with a thread dump) instead of stalling CI until the
+# job's wall-clock timeout. Guards against flaky GUI/socket/thread hangs.
+timeout = 120
