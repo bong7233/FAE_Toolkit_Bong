@@ -40,3 +40,22 @@ def check_crc(frame: bytes) -> bool:
     body, lo, hi = frame[:-2], frame[-2], frame[-1]
     crc = crc16_modbus(body)
     return (crc & 0xFF) == lo and ((crc >> 8) & 0xFF) == hi
+
+
+# Optional native fast path: if the compiled C++ module (cpp/, built via
+# pybind11) is importable, expose it. The pure-Python implementation above
+# stays the default, so the toolkit always works without a compiler.
+try:
+    import faecore as _faecore
+
+    HAS_NATIVE = True
+except ImportError:  # pragma: no cover - native module is optional
+    _faecore = None
+    HAS_NATIVE = False
+
+
+def crc16_modbus_native(data: bytes) -> int:
+    """CRC-16/MODBUS via the compiled C++ module (raises if not built)."""
+    if _faecore is None:
+        raise RuntimeError("native faecore module is not available")
+    return _faecore.crc16_modbus(bytes(data))

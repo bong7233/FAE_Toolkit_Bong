@@ -104,12 +104,12 @@ socat -d -d pty,raw,echo=0 pty,raw,echo=0
 
 ## 기술 스택
 
-- **언어/런타임**: Python 3.10+ (주력), C++17/CMake (CRC·Modbus 코어, 신뢰도 축)
+- **언어/런타임**: Python 3.10+ (주력), C++17/CMake + pybind11 (CRC·Modbus 코어 + Python 연동)
 - **GUI**: PySide6 (Qt 6) + pyqtgraph (실시간 플롯)
 - **통신**: pyserial (RS232/RS485), Modbus RTU (자체 구현), CAN (예정)
 - **ROS 2**: rclpy 브릿지 노드 (Humble, ament_python) — 리눅스
 - **품질**: pytest, ruff(lint/format)
-- **CI/CD**: GitHub Actions (Windows + Linux 매트릭스 · C++ · ROS 2), PyInstaller 패키징
+- **CI/CD**: GitHub Actions (Windows + Linux 매트릭스 · C++ · pybind11 · ROS 2), PyInstaller 패키징
 
 ## 프로젝트 구조
 
@@ -135,7 +135,7 @@ ros2_bridge/       ROS2(ament_python) 브릿지 — BMS/IO → ROS2 토픽
 - [x] ② IO/Modbus 모듈: 코덱(coils/DI/AI) + 인터락 시뮬레이터 + CLI + GUI
 - [x] ③ 티칭 포인트 관리(심화): 모델/검증 + 2D 맵 GUI + JSON/CSV
 - [x] C++ 프로토콜 코어(CRC/Modbus) + CMake + CTest (양 OS CI)
-- [ ] C++ ↔ Python pybind11 연동
+- [x] C++ ↔ Python pybind11 연동 (양 OS CI, Python과 바이트 동일성 검증)
 - [x] ROS2 브릿지 노드 (ament_python, colcon CI)
 
 ## 저자
