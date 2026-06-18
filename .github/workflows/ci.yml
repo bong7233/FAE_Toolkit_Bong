@@ -108,7 +108,9 @@ jobs:
         run: apt-get install -y python3-colcon-common-extensions python3-pip
 
       - name: Install toolkit (for runtime imports)
-        run: pip3 install -e .
+        # Non-editable install: the container's pip (22.x) can't do PEP 660
+        # editable builds, and colcon/runtime only need the package importable.
+        run: pip3 install .
 
       - name: colcon build
         shell: bash
