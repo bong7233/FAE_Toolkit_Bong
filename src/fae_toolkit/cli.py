@@ -190,8 +190,8 @@ def run_teaching_demo(args: argparse.Namespace) -> int:
     print(f"  points: {len(project.points)}")
     for p in project.points:
         print(
-            f"    [{p.id}] {p.name:13s} {p.type.value:8s} "
-            f"({p.x:6.0f},{p.y:6.0f}) θ={p.theta:4.0f}  {p.station}"
+            f"    [{p.id}] {p.name:13s} {p.type:8s} "
+            f"({p.x:6.0f},{p.y:6.0f}) θ={p.theta:4.0f}  {p.station:6s} [{p.status.value}]"
         )
     print(f"  routes: {len(project.routes)}")
     for route in project.routes:

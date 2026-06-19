@@ -3,7 +3,10 @@
 All notable changes to this project are documented here.
 The format is based on [Keep a Changelog](https://keepachangelog.com/).
 
-## [Unreleased]
+## [0.3.0] — 2026-06-19
+
+TeachingManager upgrade. Push a `v0.3.0` tag and CI builds/attaches the
+Windows/Linux executables to the GitHub Release automatically.
 
 ### Added
 - **TeachingManager upgrade** — a far richer editor:
@@ -57,5 +60,6 @@ with bundled device simulators, the Modbus-RTU + CRC-16 protocol library, the
 C++ core (pybind11), the ROS 2 bridge, and the GitHub Actions CI/CD matrix that
 builds & attaches standalone Windows/Linux executables.
 
+[0.3.0]: https://github.com/bong7233/FAE_Toolkit_Bong/releases/tag/v0.3.0
 [0.2.0]: https://github.com/bong7233/FAE_Toolkit_Bong/releases/tag/v0.2.0
 [0.1.0]: https://github.com/bong7233/FAE_Toolkit_Bong/releases/tag/v0.1.0
