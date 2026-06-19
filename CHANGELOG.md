@@ -17,6 +17,8 @@ Windows/Linux executables to the GitHub Release automatically.
   - **Customisable equipment types**: pick a colour and marker shape per type,
     and add your own types (marker shape = type, outline = type colour).
   - Modernised look (styled toolbar, status chips, tabbed Background/Types/Log).
+  - Resizable table columns (drag the borders) + a draggable splitter between
+    the table and the map, so long names/types are no longer truncated.
 - Bilingual documentation (Korean default + English `*.en.md`): USAGE,
   DEVELOPMENT, PORTFOLIO, HARDWARE; README architecture as a Mermaid diagram.
 

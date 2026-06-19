@@ -28,6 +28,7 @@ from PySide6.QtWidgets import (
     QPlainTextEdit,
     QPushButton,
     QSlider,
+    QSplitter,
     QTableWidget,
     QTableWidgetItem,
     QTabWidget,
@@ -140,13 +141,21 @@ class TeachingView(QWidget):
     # --- UI construction -------------------------------------------------- #
     def _build_ui(self) -> None:
         root = QHBoxLayout(self)
-        left = QVBoxLayout()
+        left_widget = QWidget()
+        left = QVBoxLayout(left_widget)
+        left.setContentsMargins(0, 0, 0, 0)
         left.addLayout(self._build_toolbar())
         left.addLayout(self._build_dashboard())
         left.addWidget(self._build_table(), stretch=1)
         left.addWidget(self._build_bottom_tabs())
-        root.addLayout(left, stretch=3)
-        root.addWidget(self._build_map(), stretch=5)
+        # A draggable splitter lets the user trade table width for map width.
+        splitter = QSplitter(Qt.Orientation.Horizontal)
+        splitter.addWidget(left_widget)
+        splitter.addWidget(self._build_map())
+        splitter.setStretchFactor(0, 4)
+        splitter.setStretchFactor(1, 5)
+        splitter.setSizes([660, 560])
+        root.addWidget(splitter)
 
     def _build_toolbar(self) -> QHBoxLayout:
         bar = QHBoxLayout()
@@ -187,10 +196,17 @@ class TeachingView(QWidget):
 
     def _build_table(self) -> QTableWidget:
         self.table = QTableWidget(0, len(_COLUMNS))
-        self.table.horizontalHeader().setSectionResizeMode(QHeaderView.ResizeMode.Stretch)
+        header = self.table.horizontalHeader()
+        # User-resizable columns (drag the borders); last column fills the rest.
+        header.setSectionResizeMode(QHeaderView.ResizeMode.Interactive)
+        header.setStretchLastSection(True)
+        header.setMinimumSectionSize(40)
         self.table.setSelectionBehavior(QAbstractItemView.SelectionBehavior.SelectRows)
         self.table.setSelectionMode(QAbstractItemView.SelectionMode.SingleSelection)
+        self.table.setHorizontalScrollMode(QAbstractItemView.ScrollMode.ScrollPerPixel)
         self.table.verticalHeader().setVisible(False)
+        for col, width in enumerate((46, 150, 120, 72, 72, 58, 100, 130)):
+            self.table.setColumnWidth(col, width)
         self.table.itemChanged.connect(self._on_item_changed)
         self.table.itemSelectionChanged.connect(self._redraw_map)
         return self.table
@@ -247,7 +263,11 @@ class TeachingView(QWidget):
         w = QWidget()
         layout = QVBoxLayout(w)
         self.types_table = QTableWidget(0, 3)
-        self.types_table.horizontalHeader().setSectionResizeMode(QHeaderView.ResizeMode.Stretch)
+        th = self.types_table.horizontalHeader()
+        th.setSectionResizeMode(QHeaderView.ResizeMode.Interactive)
+        th.setStretchLastSection(True)
+        self.types_table.setColumnWidth(0, 140)
+        self.types_table.setColumnWidth(1, 120)
         self.types_table.verticalHeader().setVisible(False)
         layout.addWidget(self.types_table, stretch=1)
         row = QHBoxLayout()
