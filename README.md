@@ -31,9 +31,17 @@
 > **Comm Tester** — TCP 탭에서 실제 소켓에 연결하고, HEX/ASCII 프레임을 직접 입력해 송신하면
 > 송수신이 타임스탬프와 함께 모니터에 표시됩니다. (가짜 값 없음 — 연결할 대상이 없으면 연결 실패)
 
-| Serial 탭 | TCP 탭 (실제 송수신) | CAN 탭 | TeachingManager |
-|---|---|---|---|
-| ![serial](docs/screenshot_comm_serial.png) | ![tcp](docs/screenshot_comm_tcp.png) | ![can](docs/screenshot_comm_can.png) | ![teaching](docs/screenshot_teaching.png) |
+**Comm Tester**
+
+| Serial 탭 | TCP 탭 (실제 송수신) | CAN 탭 |
+|---|---|---|
+| ![serial](docs/screenshot_comm_serial.png) | ![tcp](docs/screenshot_comm_tcp.png) | ![can](docs/screenshot_comm_can.png) |
+
+**TeachingManager** — CAD 도면 배경 위 티칭 · 상태(완료/진행중/알람) 색상 · 설비 종류별 색·모양 커스텀
+
+| 2D 맵 + CAD 배경 + 상태 | 설비 종류 커스텀 |
+|---|---|
+| ![teaching map](docs/screenshot_teaching.png) | ![teaching types](docs/screenshot_teaching_types.png) |
 
 ## 설계 원칙
 
@@ -50,7 +58,7 @@
 | 모듈 | 내용 | 상태 |
 |------|------|------|
 | **Comm Tester** (앱) | Serial/TCP/UDP/CAN 탭, 프레임 직접입력, 실제연결, 송수신 모니터 | ✅ |
-| **TeachingManager** (앱) | 별도 프로그램. 티칭 포인트/루트 2D 관리·검증·JSON/CSV | ✅ |
+| **TeachingManager** (앱) | 별도 프로그램. **CAD 도면 배경 + 티칭 상태(완료/진행중/알람) + 설비 종류별 색·모양 커스텀**, 2D 맵·검증·JSON/CSV | ✅ |
 | 프로토콜 라이브러리 | Modbus-RTU / CRC-16 자체 구현 (탭의 프리셋 + 에뮬레이터에 재사용) | ✅ |
 | 디바이스 에뮬레이터 | BMS/IO/CAN 시뮬레이터, `bms-sim-serve`(실제 포트에 가짜 슬레이브 서빙) | ✅ |
 | C++ 코어 (+pybind11) | CRC/Modbus를 C++17로, Python과 바이트 동일성 검증 | ✅ |
@@ -167,7 +175,9 @@ ros2_bridge/       ROS 2 (ament_python) 브릿지
 - [x] 수신 프레임 Modbus 디코더 — 모니터에서 TX는 요청, RX는 응답으로 해석(레지스터/비트/예외/CRC)
 - [x] 저장 프레임(매크로) — 제조사별로 프레임을 저장·불러오기(JSON 영속, 탭별 분리)
 - [x] 기본 프레임 라이브러리 동봉 (BMS / IO / ASCII 시드)
+- [x] TeachingManager 고도화 — CAD 도면 배경, 티칭 상태(완료/진행중/알람), 설비 종류별 색·모양 커스텀
 - [ ] 사용자 프레임 시퀀스(시나리오) 실행 — 여러 프레임을 순서대로 자동 송신
+- [ ] CAD 벡터(DXF) 직접 로딩
 
 ## 저자
 

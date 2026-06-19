@@ -94,6 +94,49 @@ _STRINGS: dict[str, dict[str, str]] = {
     "tm.btn_delete": {"en": "Delete point", "ko": "포인트 삭제"},
     "tm.btn_validate": {"en": "Validate", "ko": "검증"},
     "tm.map_title": {"en": "Teaching map (mm)", "ko": "티칭 맵 (mm)"},
+    # table columns
+    "tm.col_id": {"en": "id", "ko": "번호"},
+    "tm.col_name": {"en": "name", "ko": "이름"},
+    "tm.col_type": {"en": "type", "ko": "설비 종류"},
+    "tm.col_x": {"en": "x (mm)", "ko": "x (mm)"},
+    "tm.col_y": {"en": "y (mm)", "ko": "y (mm)"},
+    "tm.col_theta": {"en": "θ (°)", "ko": "θ (°)"},
+    "tm.col_station": {"en": "station", "ko": "설비 ID"},
+    "tm.col_status": {"en": "status", "ko": "상태"},
+    "tm.col_color": {"en": "color", "ko": "색상"},
+    "tm.col_shape": {"en": "shape", "ko": "모양"},
+    # status
+    "tm.status_in_progress": {"en": "In progress", "ko": "진행중"},
+    "tm.status_done": {"en": "Done", "ko": "완료"},
+    "tm.status_alarm": {"en": "Alarm", "ko": "알람"},
+    # dashboard
+    "tm.dash_total": {"en": "Total", "ko": "전체"},
+    # bottom tabs
+    "tm.tab_background": {"en": "Background (CAD)", "ko": "배경 도면 (CAD)"},
+    "tm.tab_types": {"en": "Equipment types", "ko": "설비 종류"},
+    "tm.tab_log": {"en": "Log", "ko": "로그"},
+    # background
+    "tm.bg_load": {"en": "Load image…", "ko": "이미지 불러오기…"},
+    "tm.bg_clear": {"en": "Clear", "ko": "제거"},
+    "tm.bg_opacity": {"en": "Opacity", "ko": "투명도"},
+    "tm.bg_scale": {"en": "Scale (mm/px)", "ko": "축척 (mm/픽셀)"},
+    "tm.bg_none": {"en": "(no background)", "ko": "(배경 없음)"},
+    "tm.bg_hint": {
+        "en": "Load a floor plan / CAD export (PNG/JPG/BMP) and teach points on top of it.",
+        "ko": "도면/CAD(PNG·JPG·BMP)을 불러와 그 위에 포인트를 티칭하세요.",
+    },
+    # equipment types editor
+    "tm.types_add": {"en": "Add type", "ko": "종류 추가"},
+    "tm.types_remove": {"en": "Remove", "ko": "삭제"},
+    "tm.types_new_prompt": {"en": "New equipment type name:", "ko": "새 설비 종류 이름:"},
+    # shapes
+    "tm.shape_circle": {"en": "circle", "ko": "원"},
+    "tm.shape_square": {"en": "square", "ko": "사각형"},
+    "tm.shape_triangle": {"en": "triangle", "ko": "삼각형"},
+    "tm.shape_diamond": {"en": "diamond", "ko": "마름모"},
+    "tm.shape_star": {"en": "star", "ko": "별"},
+    "tm.shape_plus": {"en": "plus", "ko": "플러스"},
+    "tm.shape_cross": {"en": "cross", "ko": "엑스"},
 }
 
 

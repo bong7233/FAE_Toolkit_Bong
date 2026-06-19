@@ -31,9 +31,17 @@
 > **Comm Tester** — On the TCP tab, connect to a real socket and directly enter HEX/ASCII frames to send;
 > TX/RX is shown on the monitor with timestamps. (No fake values — if there is nothing to connect to, the connection fails.)
 
-| Serial tab | TCP tab (real TX/RX) | CAN tab | TeachingManager |
-|---|---|---|---|
-| ![serial](docs/screenshot_comm_serial.png) | ![tcp](docs/screenshot_comm_tcp.png) | ![can](docs/screenshot_comm_can.png) | ![teaching](docs/screenshot_teaching.png) |
+**Comm Tester**
+
+| Serial tab | TCP tab (real TX/RX) | CAN tab |
+|---|---|---|
+| ![serial](docs/screenshot_comm_serial.png) | ![tcp](docs/screenshot_comm_tcp.png) | ![can](docs/screenshot_comm_can.png) |
+
+**TeachingManager** — teach on top of a CAD drawing · status colors (done/in-progress/alarm) · per-equipment-type color & shape
+
+| 2D map + CAD background + status | Equipment-type customization |
+|---|---|
+| ![teaching map](docs/screenshot_teaching.png) | ![teaching types](docs/screenshot_teaching_types.png) |
 
 ## Design Principles
 
@@ -50,7 +58,7 @@
 | Module | Contents | Status |
 |------|------|------|
 | **Comm Tester** (app) | Serial/TCP/UDP/CAN tabs, direct frame entry, real connections, TX/RX monitor | ✅ |
-| **TeachingManager** (app) | Separate program. 2D management/validation of teaching points/routes · JSON/CSV | ✅ |
+| **TeachingManager** (app) | Separate program. **CAD-drawing background + teaching status (done/in-progress/alarm) + per-equipment-type color & shape**, 2D map · validation · JSON/CSV | ✅ |
 | Protocol library | Custom implementation of Modbus-RTU / CRC-16 (reused by tab presets + emulator) | ✅ |
 | Device emulator | BMS/IO/CAN simulator, `bms-sim-serve` (serves a fake slave on a real port) | ✅ |
 | C++ core (+pybind11) | CRC/Modbus in C++17, byte-identity verified against Python | ✅ |
@@ -167,7 +175,9 @@ ros2_bridge/       ROS 2 (ament_python) bridge
 - [x] Received-frame Modbus decoder — in the monitor, TX is interpreted as a request and RX as a response (register/bit/exception/CRC)
 - [x] Saved frames (macros) — save and load frames per vendor (JSON persistence, separated per tab)
 - [x] Bundled default frame library (BMS / IO / ASCII seed)
+- [x] TeachingManager upgrade — CAD-drawing background, teaching status (done/in-progress/alarm), per-equipment-type color & shape
 - [ ] User frame sequences (scenarios) execution — automatically send multiple frames in order
+- [ ] Direct CAD vector (DXF) loading
 
 ## Author
 

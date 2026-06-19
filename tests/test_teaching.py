@@ -3,10 +3,13 @@
 import csv
 
 from fae_toolkit.teaching import (
+    BackgroundImage,
+    EquipmentStyle,
     PointType,
     Route,
     TeachingPoint,
     TeachingProject,
+    TeachingStatus,
     export_points_csv,
     load_project,
     sample_project,
@@ -43,6 +46,58 @@ def test_export_csv(tmp_path):
         rows = list(csv.DictReader(fh))
     assert len(rows) == len(project.points)
     assert rows[0]["name"] == "HOME"
+    assert rows[0]["status"] == "DONE"
+
+
+def test_point_type_accepts_enum_or_str():
+    a = TeachingPoint(1, "a", PointType.LOAD)
+    b = TeachingPoint(2, "b", "CONVEYOR")  # custom equipment type
+    assert a.type == "LOAD" and isinstance(a.type, str)
+    assert b.type == "CONVEYOR"
+
+
+def test_status_default_and_coercion():
+    assert TeachingPoint(1, "a").status == TeachingStatus.IN_PROGRESS
+    assert TeachingPoint(2, "b", status="DONE").status == TeachingStatus.DONE
+
+
+def test_status_and_style_round_trip():
+    project = TeachingProject(
+        name="styled",
+        points=[TeachingPoint(1, "C1", "CONVEYOR", 0, 0, status=TeachingStatus.ALARM)],
+        styles=[EquipmentStyle("CONVEYOR", "#123456", "star")],
+        background=BackgroundImage("plan.png", x=10, y=20, scale=2.0, opacity=0.4),
+    )
+    restored = TeachingProject.from_dict(project.to_dict())
+    assert restored.to_dict() == project.to_dict()
+    assert restored.points[0].status == TeachingStatus.ALARM
+    assert restored.style_for("CONVEYOR").shape == "star"
+    assert restored.background.scale == 2.0
+
+
+def test_style_for_falls_back():
+    project = TeachingProject()
+    assert project.style_for("UNKNOWN").type == "UNKNOWN"  # neutral fallback
+
+
+def test_validation_flags_alarm():
+    project = sample_project()
+    project.points[0].status = TeachingStatus.ALARM
+    issues = "\n".join(validate(project))
+    assert "ALARM" in issues
+
+
+def test_legacy_json_without_new_fields_loads():
+    legacy = {
+        "name": "old",
+        "version": 1,
+        "points": [{"id": 1, "name": "P1", "type": "WAYPOINT", "x": 0, "y": 0}],
+        "routes": [],
+    }
+    project = TeachingProject.from_dict(legacy)
+    assert project.points[0].status == TeachingStatus.IN_PROGRESS
+    assert project.styles  # defaults applied
+    assert project.background is None
 
 
 def test_remove_point_also_cleans_routes():

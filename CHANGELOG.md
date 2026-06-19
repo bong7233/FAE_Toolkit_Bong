@@ -3,6 +3,30 @@
 All notable changes to this project are documented here.
 The format is based on [Keep a Changelog](https://keepachangelog.com/).
 
+## [Unreleased]
+
+### Added
+- **TeachingManager upgrade** — a far richer editor:
+  - **CAD/floor-plan background**: load a drawing (PNG/JPG/BMP), set its scale
+    (mm/px) and opacity, and teach points on top of it.
+  - **Teaching status** per point — *in progress / done / alarm* — saved in the
+    project, shown as the marker fill colour and summarised in a dashboard.
+  - **Customisable equipment types**: pick a colour and marker shape per type,
+    and add your own types (marker shape = type, outline = type colour).
+  - Modernised look (styled toolbar, status chips, tabbed Background/Types/Log).
+- Bilingual documentation (Korean default + English `*.en.md`): USAGE,
+  DEVELOPMENT, PORTFOLIO, HARDWARE; README architecture as a Mermaid diagram.
+
+### Changed
+- Teaching model: `TeachingPoint.type` is now free-form text (custom equipment
+  types) with `status`; projects carry an `EquipmentStyle` table and optional
+  background image. Older JSON files still load.
+
+### Fixed
+- CI: a flaky offscreen-GUI stall could hang until the job timeout and *cancel*
+  the run. Added `pytest-timeout` (per-test 120s) so hangs fail fast, and
+  tightened the GUI-smoke job timeout.
+
 ## [0.2.0] — 2026-06-18
 
 Field-usability redesign. Push a `v0.2.0` tag and CI builds/attaches the

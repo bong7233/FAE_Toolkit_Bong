@@ -7,7 +7,13 @@ import json
 import math
 from pathlib import Path
 
-from fae_toolkit.teaching.model import PointType, Route, TeachingPoint, TeachingProject
+from fae_toolkit.teaching.model import (
+    PointType,
+    Route,
+    TeachingPoint,
+    TeachingProject,
+    TeachingStatus,
+)
 
 
 def load_project(path: str | Path) -> TeachingProject:
@@ -21,7 +27,7 @@ def save_project(project: TeachingProject, path: str | Path) -> None:
 
 
 def export_points_csv(project: TeachingProject, path: str | Path) -> None:
-    fields = ["id", "name", "type", "x", "y", "theta", "station", "notes"]
+    fields = ["id", "name", "type", "x", "y", "theta", "station", "status", "notes"]
     with open(path, "w", newline="", encoding="utf-8") as fh:
         writer = csv.DictWriter(fh, fieldnames=fields)
         writer.writeheader()
@@ -53,10 +59,14 @@ def validate(project: TeachingProject) -> list[str]:
                 issues.append(f"ERROR: route '{route.name}' references unknown point id {pid}")
 
     types = {p.type for p in project.points}
-    if PointType.LOAD not in types:
+    if PointType.LOAD.value not in types:
         issues.append("WARN: project has no LOAD point")
-    if PointType.UNLOAD not in types:
+    if PointType.UNLOAD.value not in types:
         issues.append("WARN: project has no UNLOAD point")
+
+    for p in project.points:
+        if p.status == TeachingStatus.ALARM:
+            issues.append(f"WARN: point '{p.name}' is in ALARM (teaching faulted)")
 
     # Points taught at (nearly) the same coordinate are often a mistake.
     for i, a in enumerate(project.points):
@@ -68,16 +78,17 @@ def validate(project: TeachingProject) -> list[str]:
 
 def sample_project() -> TeachingProject:
     """A small but realistic AGV layout for demos and tests."""
+    S = TeachingStatus
     points = [
-        TeachingPoint(1, "HOME", PointType.STANDBY, 0, 0, 0, "", "dock / idle"),
-        TeachingPoint(2, "CHARGE_1", PointType.CHARGE, 500, 0, 180, "CHG01", "charger"),
-        TeachingPoint(3, "WP_AISLE_1", PointType.WAYPOINT, 2000, 0, 0),
-        TeachingPoint(4, "WP_AISLE_2", PointType.WAYPOINT, 2000, 3000, 90),
-        TeachingPoint(5, "ST_A_LOAD", PointType.LOAD, 2600, 3000, 90, "STN_A", "input port"),
-        TeachingPoint(6, "ST_B_UNLOAD", PointType.UNLOAD, 2000, 6000, 90, "STN_B", "output port"),
+        TeachingPoint(1, "HOME", "STANDBY", 0, 0, 0, "", S.DONE, "dock / idle"),
+        TeachingPoint(2, "CHARGE_1", "CHARGE", 500, 0, 180, "CHG01", S.DONE, "charger"),
+        TeachingPoint(3, "WP_AISLE_1", "WAYPOINT", 2000, 0, 0, "", S.DONE),
+        TeachingPoint(4, "WP_AISLE_2", "WAYPOINT", 2000, 3000, 90, "", S.IN_PROGRESS),
+        TeachingPoint(5, "ST_A_LOAD", "LOAD", 2600, 3000, 90, "STN_A", S.IN_PROGRESS, "input port"),
+        TeachingPoint(6, "ST_B_UNLOAD", "UNLOAD", 2000, 6000, 90, "STN_B", S.IN_PROGRESS, "output"),
     ]
     routes = [
         Route("A_to_B", [1, 3, 4, 5, 4, 6]),
         Route("to_charge", [1, 2]),
     ]
-    return TeachingProject(name="sample_line", version=1, points=points, routes=routes)
+    return TeachingProject(name="sample_line", version=2, points=points, routes=routes)

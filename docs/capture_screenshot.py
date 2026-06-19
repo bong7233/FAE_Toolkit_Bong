@@ -13,10 +13,38 @@ import time
 
 os.environ.setdefault("QT_QPA_PLATFORM", "offscreen")
 
+from PySide6.QtCore import Qt  # noqa: E402
+from PySide6.QtGui import QColor, QFont, QImage, QPainter, QPen  # noqa: E402
 from PySide6.QtWidgets import QApplication  # noqa: E402
 
+from fae_toolkit.teaching import BackgroundImage, TeachingStatus  # noqa: E402
 from fae_toolkit.teaching_manager.main_window import MainWindow as TeachingWindow  # noqa: E402
 from fae_toolkit.ui.main_window import MainWindow  # noqa: E402
+
+
+def _make_floorplan(path: str, w: int = 380, h: int = 760) -> None:
+    """Draw a simple plant floor-plan PNG to demo the CAD background feature."""
+    img = QImage(w, h, QImage.Format.Format_RGBA8888)
+    img.fill(QColor("#ffffff"))
+    p = QPainter(img)
+    p.setRenderHint(QPainter.RenderHint.Antialiasing)
+    p.setPen(QPen(QColor("#34495e"), 5))  # outer wall
+    p.drawRect(10, 10, w - 20, h - 20)
+    p.setPen(QPen(QColor("#b0b8c0"), 2, Qt.PenStyle.DashLine))  # main aisle
+    p.drawLine(w // 2, 24, w // 2, h - 24)
+    p.setFont(QFont("sans", 13))
+    for x, y, bw, bh, label, col in (
+        (40, 60, 120, 90, "STATION A", "#2980b9"),
+        (w - 170, 300, 130, 110, "STATION B", "#16a085"),
+        (40, h - 150, 110, 80, "CHARGER", "#8e44ad"),
+    ):
+        p.setPen(QPen(QColor(col), 3))
+        p.setBrush(QColor(col).lighter(170))
+        p.drawRect(x, y, bw, bh)
+        p.setPen(QColor("#2c3e50"))
+        p.drawText(x + 8, y + 22, label)
+    p.end()
+    img.save(path, "PNG")
 
 
 def _pump(app: QApplication, seconds: float) -> None:
@@ -110,14 +138,23 @@ def main() -> int:
     _save(window, "docs/screenshot_comm_can.png")
     window.close()
 
-    # TeachingManager (separate app).
+    # TeachingManager (separate app): CAD background + status colours + types.
     tm = TeachingWindow()
-    tm.resize(1100, 680)
+    tm.resize(1180, 720)
     tm.show()
-    tm.view.table.selectRow(4)
-    tm.view._validate()
+    floor = "docs/sample_floorplan.png"
+    _make_floorplan(floor)
+    view = tm.view
+    view._project.background = BackgroundImage(path=floor, x=-400, y=-400, scale=10.0, opacity=0.5)
+    view._project.points[5].status = TeachingStatus.ALARM  # showcase an alarm marker
+    view._reload()
+    view.table.selectRow(4)
     _pump(app, 0.4)
     _save(tm, "docs/screenshot_teaching.png")
+    # Second shot: the equipment-types editor (custom colour/shape per type).
+    tm.view.tabs.setCurrentIndex(1)
+    _pump(app, 0.3)
+    _save(tm, "docs/screenshot_teaching_types.png")
     tm.close()
     return 0
 

@@ -86,13 +86,33 @@ Switch instantly from the top menu **Language → English / 한국어** (no rest
 
 ## 4. Using TeachingManager
 
-Manage AGV teaching points (coordinates/name/type) with a table and a 2D map.
+Manage AGV teaching points (coordinates/name/equipment type/status) with a table
+and a **to-scale 2D map**.
 
+**Basic actions**
 - **Sample** : load the example project
-- **Add / Delete point** : edit rows in the table
-- **Validate** : check for duplicate coordinates, range, etc., then show a log
-- **Open… / Save…** : project JSON I/O
-- **Export CSV…** : save the table as CSV
+- **Add / Delete point** : edit rows in the table (name·x·y·θ·station id)
+- **Validate** : checks for duplicate coordinates, duplicate names, missing
+  LOAD/UNLOAD, **alarm points**, etc., then shows a log
+- **Open… / Save…** : project JSON I/O · **Export CSV…** : save the table as CSV
+
+**Background drawing (CAD)** — the bottom *Background (CAD)* tab
+- **Load image…** places a drawing / floor plan (PNG·JPG·BMP) under the map so
+  you teach points on top of it.
+- **Scale (mm/px)** matches it to real dimensions; the **Opacity** slider tunes
+  readability. (Export your CAD to PNG/JPG; direct vector DXF loading is on the
+  roadmap.)
+
+**Custom equipment types** — the bottom *Equipment types* tab
+- Assign a **color** and **marker shape** (circle/square/triangle/diamond/star/
+  +/✕) per equipment type, freely.
+- **Add type** creates a new equipment type; apply it to a point from the *type*
+  column. On the map, **shape = equipment type**, **outline = type color**.
+
+**Teaching status** — the *status* column (and the top dashboard)
+- Store **In progress (amber) / Done (green) / Alarm (red)** per point.
+  *Alarm* = taught but not working correctly and needing rework.
+- The marker **fill = status**; the top chips summarize the counts per status.
 
 ---
 
