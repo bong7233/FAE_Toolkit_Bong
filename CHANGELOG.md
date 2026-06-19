@@ -3,6 +3,17 @@
 All notable changes to this project are documented here.
 The format is based on [Keep a Changelog](https://keepachangelog.com/).
 
+## [0.3.1] — 2026-06-19
+
+Patch release: ships the TeachingManager table fix that landed just after the
+`v0.3.0` tag.
+
+### Fixed
+- TeachingManager: table columns are now user-resizable (drag the borders), with
+  a draggable splitter between the table and the map and a horizontal scrollbar,
+  so long names / types / status are no longer truncated. Same for the
+  equipment-types table.
+
 ## [0.3.0] — 2026-06-19
 
 TeachingManager upgrade. Push a `v0.3.0` tag and CI builds/attaches the
@@ -17,8 +28,6 @@ Windows/Linux executables to the GitHub Release automatically.
   - **Customisable equipment types**: pick a colour and marker shape per type,
     and add your own types (marker shape = type, outline = type colour).
   - Modernised look (styled toolbar, status chips, tabbed Background/Types/Log).
-  - Resizable table columns (drag the borders) + a draggable splitter between
-    the table and the map, so long names/types are no longer truncated.
 - Bilingual documentation (Korean default + English `*.en.md`): USAGE,
   DEVELOPMENT, PORTFOLIO, HARDWARE; README architecture as a Mermaid diagram.
 
