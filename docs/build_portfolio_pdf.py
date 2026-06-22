@@ -167,9 +167,7 @@ def _build_html() -> str:
     </p>
     """
 
-    return (
-        f"<html><body>{head}{summary}{fit}{arch}{teaching}{comm}{stack}{mapping}</body></html>"
-    )
+    return f"<html><body>{head}{summary}{fit}{arch}{teaching}{comm}{stack}{mapping}</body></html>"
 
 
 def main() -> int:
