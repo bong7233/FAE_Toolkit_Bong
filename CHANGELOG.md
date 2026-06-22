@@ -3,6 +3,24 @@
 All notable changes to this project are documented here.
 The format is based on [Keep a Changelog](https://keepachangelog.com/).
 
+## [0.3.2] — 2026-06-22
+
+Patch release: TeachingManager equipment-type fixes and a monitor font fix found
+during a full debugging pass.
+
+### Fixed
+- TeachingManager: the **"Add type" button now works**. It was a no-op because
+  the duplicate check went through `style_for()`, which fabricates a fallback
+  whose `.type` always equals the query. Added an exact
+  `TeachingProject.has_style()` membership test and used it instead.
+- TeachingManager: typing a **new equipment type** into a point row now registers
+  a styleable entry (colour + marker shape) once editing is committed, instead of
+  silently doing nothing — and no longer risks creating throwaway types while you
+  type.
+- Comm Tester monitor: use the system fixed-pitch font (with a Monospace style
+  hint) so HEX columns line up on Windows; `QFont("monospace")` did not resolve
+  to a real font face there.
+
 ## [0.3.1] — 2026-06-19
 
 Patch release: ships the TeachingManager table fix that landed just after the

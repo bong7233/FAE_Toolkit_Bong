@@ -150,3 +150,34 @@ def test_teaching_manager_window(qapp):
     window.view._validate()
     assert "OK" in window.view.log_view.toPlainText()
     window.close()
+
+
+def test_teaching_add_type_button_adds_styleable_entry(qapp, monkeypatch):
+    # Regression: the "Add type" button used to be a no-op (broken existence
+    # check), so a new equipment type could never be created or styled.
+    from fae_toolkit.teaching_manager import view as tmview
+
+    v = tmview.TeachingView()
+    before = len(v._project.styles)
+    monkeypatch.setattr(tmview.QInputDialog, "getText", lambda *a, **k: ("DOCK", True))
+    v._add_type()
+    assert v._project.has_style("DOCK")
+    assert len(v._project.styles) == before + 1
+    v._add_type()  # same name again must not duplicate
+    assert len(v._project.styles) == before + 1
+    v.close()
+
+
+def test_teaching_typed_type_registers_style_on_commit(qapp):
+    # Typing a brand-new type into a point row updates the point live and, once
+    # editing is committed, registers a styleable entry for it.
+    from fae_toolkit.teaching_manager.view import TeachingView
+
+    v = TeachingView()
+    combo = v.table.cellWidget(0, 2)  # row 0 "type" combo
+    combo.setCurrentText("AGV_PARK")
+    assert v._project.points[0].type == "AGV_PARK"
+    assert not v._project.has_style("AGV_PARK")  # not yet, still editing
+    v._commit_type(combo)
+    assert v._project.has_style("AGV_PARK")
+    v.close()

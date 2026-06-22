@@ -458,7 +458,7 @@ class TeachingView(QWidget):
     def _add_type(self) -> None:
         name, ok = QInputDialog.getText(self, tr("tm.types_add"), tr("tm.types_new_prompt"))
         name = name.strip()
-        if not ok or not name or self._project.style_for(name).type == name:
+        if not ok or not name or self._project.has_style(name):
             return
         self._project.styles.append(EquipmentStyle(name, "#1abc9c", "circle"))
         self._reload_types()
@@ -528,6 +528,9 @@ class TeachingView(QWidget):
         combo.setCurrentText(p.type)
         combo.setProperty("pid", p.id)
         combo.currentTextChanged.connect(self._on_type_changed)
+        # Register a brand-new type as a styleable entry only once editing is
+        # committed (Enter / focus-out), not on every keystroke.
+        combo.lineEdit().editingFinished.connect(lambda c=combo: self._commit_type(c))
         self.table.setCellWidget(row, 2, combo)
 
     def _set_status_combo(self, row: int, p: TeachingPoint) -> None:
@@ -572,12 +575,22 @@ class TeachingView(QWidget):
         point = self._project.get_point(combo.property("pid"))
         if point is None:
             return
-        text = text.strip()
-        point.type = text or "WAYPOINT"
-        if text and self._project.style_for(text).type != text:
+        point.type = text.strip() or "WAYPOINT"
+        self._redraw_map()
+
+    def _commit_type(self, combo: QComboBox) -> None:
+        """Register a freshly typed equipment type as a styleable entry.
+
+        Called when the type combo's editing finishes; only adds a style for a
+        genuinely new type name (existing ones keep their colour/shape).
+        """
+        if self._loading:
+            return
+        text = combo.currentText().strip()
+        if text and not self._project.has_style(text):
             self._project.styles.append(EquipmentStyle(text, "#1abc9c", "circle"))
             self._reload_types()
-        self._redraw_map()
+            self._redraw_map()
 
     def _on_status_changed(self, _index: int) -> None:
         if self._loading:

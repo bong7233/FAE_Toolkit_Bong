@@ -80,6 +80,15 @@ def test_style_for_falls_back():
     assert project.style_for("UNKNOWN").type == "UNKNOWN"  # neutral fallback
 
 
+def test_has_style_is_exact_membership():
+    # style_for() fabricates a fallback for any name, so existence checks must
+    # use has_style() (regression: the "Add type" button relied on this).
+    project = TeachingProject()  # seeded with default styles
+    assert project.has_style("WAYPOINT") is True
+    assert project.has_style("DOCK") is False
+    assert project.style_for("DOCK").type == "DOCK"  # fallback still works for rendering
+
+
 def test_validation_flags_alarm():
     project = sample_project()
     project.points[0].status = TeachingStatus.ALARM

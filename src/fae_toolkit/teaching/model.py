@@ -204,6 +204,15 @@ class TeachingProject:
             EquipmentStyle(type_name, "#7f8c8d", "circle"),
         )
 
+    def has_style(self, type_name: str) -> bool:
+        """True if an :class:`EquipmentStyle` is explicitly defined for *type_name*.
+
+        Unlike :meth:`style_for` (which fabricates a neutral fallback for unknown
+        types so the map can always render), this is an exact membership test —
+        use it before adding a new type so existing ones are not duplicated.
+        """
+        return any(s.type == type_name for s in self.styles)
+
     def types(self) -> list[str]:
         """All known equipment-type names (styles + any used by points)."""
         names = [s.type for s in self.styles]

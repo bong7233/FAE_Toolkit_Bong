@@ -4,7 +4,7 @@ from __future__ import annotations
 
 import time
 
-from PySide6.QtGui import QFont
+from PySide6.QtGui import QFont, QFontDatabase
 from PySide6.QtWidgets import (
     QCheckBox,
     QFileDialog,
@@ -55,7 +55,12 @@ class MonitorWidget(QGroupBox):
         self.view = QPlainTextEdit()
         self.view.setReadOnly(True)
         self.view.setMaximumBlockCount(5000)
-        self.view.setFont(QFont("monospace"))
+        # A guaranteed fixed-pitch font so HEX columns line up on every OS
+        # (QFont("monospace") does not resolve to a real face on Windows); the
+        # Monospace style hint keeps any fallback substitution fixed-pitch too.
+        mono = QFontDatabase.systemFont(QFontDatabase.SystemFont.FixedFont)
+        mono.setStyleHint(QFont.StyleHint.Monospace)
+        self.view.setFont(mono)
 
         layout.addLayout(options)
         layout.addWidget(self.view)
